@@ -1,0 +1,6 @@
+{
+	"servicePort" : "4000",
+	"redisUrl" : "redis://localhost:6379",
+	"websocket" : true,
+	"isDebug" : false
+}
