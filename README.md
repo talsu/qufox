@@ -68,3 +68,4 @@ var QufoxServer = require('./QufoxServer').QufoxServer;
 
 new QufoxServer(4000);
 ```
+Service is running at http://localhost:4000
