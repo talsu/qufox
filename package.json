@@ -1,6 +1,6 @@
 {
   "name": "qufox",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "scripts": {
     "start": "node bin/qufox"
   },
@@ -12,7 +12,7 @@
     "socket.io-redis": "^0.1.4"
   },
   "bin": {
-    "bongtalk": "./bin/qufox"
+    "qufox": "./bin/qufox"
   },
   "main": "QufoxServer.js",
   "devDependencies": {},
