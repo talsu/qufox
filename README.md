@@ -64,7 +64,7 @@ Alert popup appears on the first page when you open two same pages.
 
 ### Module
 ```javascript
-var QufoxServer = require('./QufoxServer').QufoxServer;
+var QufoxServer = require('qufox').QufoxServer;
 
 new QufoxServer(4000);
 ```
