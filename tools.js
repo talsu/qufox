@@ -1,5 +1,6 @@
 var redis = require("redis");
 var util = require('util');
+var debug = require('debug')('qufox');
 
 exports.createRedisClient = function(redisUrl, option){
     if (redisUrl){
@@ -20,12 +21,4 @@ exports.createRedisClient = function(redisUrl, option){
     else{
         return redis.createClient("127.0.0.1", 6379, option);
     }
-};
-
-exports.log = function(obj){
-    util.log(util.inspect(obj));
-};
-
-exports.pLog = function(message){
-    util.log('[pid:' + process.pid + '] ' + message);
 };

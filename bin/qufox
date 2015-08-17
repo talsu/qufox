@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-
+var util = require('util');
+var debug = require('debug')('qufox');
 var config = require('../config');
 var tools = require('../tools');
 var QufoxServer = require('../QufoxServer').QufoxServer;
@@ -20,6 +21,8 @@ var command = require('optimist')
 config.servicePort = process.env.PORT || command.argv.p || Number(config.servicePort) || 3000;
 config.redisUrl = process.env.REDISCLOUD_URL || command.argv.r || config.redisUrl || false;
 config.websocket = command.argv.w || config.websocket || true;
+
+debug('Qufox server starting with options ' + util.inspect(config));
 
 var transports = config.websocket ? ['websocket', 'polling'] : ['polling'];
 var adapter = null;
