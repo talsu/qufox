@@ -1,40 +1,46 @@
 var util = require('util');
 var debug = require('debug')('qufox');
 var Sockets = require('socket.io');
+var tools = require('./tools');
 
 exports.QufoxServer = (function(){
-	function QufoxServer (listenTarget, option, adapter) {
+	function QufoxServer (listenTarget, option, redisUrl) {
 		var self = this;
 
 		var io = Sockets(listenTarget, option);
-		if (adapter) io.adapter(adapter);
+		if (redisUrl) {
+			 io.adapter(require('socket.io-redis')({
+				pubClient : tools.createRedisClient(redisUrl, {return_buffers:true}),
+				subClient : tools.createRedisClient(redisUrl, {return_buffers:true})
+			}));
+		}
 
 		io.on('connection', function (socket){
-			debug('connected - ' + ' (socketId: ' + socket.id + ' )');
+			debug('connected - ' + util.inspect({socketId:socket.id, client:socket.request.connection._peername}, false, null, true));
 			socket.emit('connected');
 			
 			socket.on('join', function (sessionId) {
-				socket.join(sessionId);
-				debug('joinSession -'+ ' (sessionId: ' + sessionId + ')');
+				debug('join - ' + util.inspect({socketId:socket.id, sessionId:sessionId}, false, null, true));
+				socket.join(sessionId);				
 				socket.emit('joinCallback', {id:sessionId, data:'success'});
 			});
 
 			socket.on('send', function (payload) {
 				if (payload && payload.sessionId && payload.id) {
-					debug('send -' + util.inspect(payload));
+					debug('send - ' + util.inspect({socketId:socket.id, payload:payload}, false, null, true));
 					socket.broadcast.to(payload.sessionId).emit('receive', {id:payload.sessionId, data:payload.data});
 					socket.emit('sendCallback', {id:payload.id, data:'success'});
 				}
 			});
 
 			socket.on('leave', function (sessionId) {
-				socket.leave(sessionId);
-				debug('leaveSession -'+ ' (sessionId: ' + sessionId + ')');
+				debug('leave - ' + util.inspect({socketId:socket.id, sessionId:sessionId}, false, null, true));//
+				socket.leave(sessionId);				
 				socket.emit('leaveCallback', {id:sessionId, data:'success'});
 			});
 
 			socket.on('disconnect', function () {
-				debug('disconnect - ' + ' (socketId: ' + socket.id + ' )');
+				debug('disconnect - ' + util.inspect({socketId:socket.id}, false, null, true));
 			});
 		});
 

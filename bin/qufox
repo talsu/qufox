@@ -2,10 +2,7 @@
 var util = require('util');
 var debug = require('debug')('qufox');
 var config = require('../config');
-var tools = require('../tools');
 var QufoxServer = require('../QufoxServer').QufoxServer;
-var socketRedisAdapter = require('socket.io-redis');
-
 
 var command = require('optimist')
 	.usage('Usage : $0 --port [num] --redisurl [url] --instance [num] --single --socketonly --debug')
@@ -25,15 +22,5 @@ config.websocket = command.argv.w || config.websocket || true;
 debug('Qufox server starting with options ' + util.inspect(config));
 
 var transports = config.websocket ? ['websocket', 'polling'] : ['polling'];
-var adapter = null;
 
-if (config.redisUrl) {
-	var adapterOption = {
-		pubClient : tools.createRedisClient(config.redisUrl, {return_buffers:true}),
-		subClient : tools.createRedisClient(config.redisUrl, {return_buffers:true})
-	};
-
-	adapter = socketRedisAdapter(adapterOption)
-}
-
-new QufoxServer(config.servicePort, {transports:transports}, adapter);
+new QufoxServer(config.servicePort, {transports:transports}, config.redisUrl);
