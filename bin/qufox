@@ -23,4 +23,4 @@ debug('Qufox server starting with options ' + util.inspect(config));
 
 var transports = config.websocket ? ['websocket', 'polling'] : ['polling'];
 
-new QufoxServer(config.servicePort, {transports:transports}, config.redisUrl);
+new QufoxServer(config.servicePort, {transports:transports}, config.redisUrl, config.monitorServer);

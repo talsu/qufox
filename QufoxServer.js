@@ -4,7 +4,7 @@ var Sockets = require('socket.io');
 var tools = require('./tools');
 
 exports.QufoxServer = (function(){
-	function QufoxServer (listenTarget, option, redisUrl) {
+	function QufoxServer (listenTarget, option, redisUrl, monitor) {
 		var self = this;
 
 		var io = Sockets(listenTarget, option);
@@ -35,7 +35,7 @@ exports.QufoxServer = (function(){
 
 			socket.on('leave', function (sessionId) {
 				debug('leave - ' + util.inspect({socketId:socket.id, sessionId:sessionId}, false, null, true));//
-				socket.leave(sessionId);				
+				socket.leave(sessionId);
 				socket.emit('leaveCallback', {id:sessionId, data:'success'});
 			});
 
@@ -45,6 +45,10 @@ exports.QufoxServer = (function(){
 		});
 
 		debug('Qufox server is running.');
+
+		if (monitor && monitor.host && monitor.port){
+			self.monitor = new require('./QufoxMonitorClient').QufoxMonitorClient(monitor.host, monitor.port, io);
+		}
 	}
 
 	return QufoxServer;
