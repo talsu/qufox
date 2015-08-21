@@ -9,6 +9,7 @@ var command = require('optimist')
 	.alias('p', 'port')
 	.alias('r', 'redisurl')
 	.alias('w', 'websocket')
+	.alias('n', 'name')
 	.check(function (argv){
 		if (argv.p && isNaN(argv.p)){
 			throw 'port must be Number.'
@@ -18,9 +19,16 @@ var command = require('optimist')
 config.servicePort = process.env.PORT || command.argv.p || Number(config.servicePort) || 3000;
 config.redisUrl = process.env.REDISCLOUD_URL || command.argv.r || config.redisUrl || false;
 config.websocket = command.argv.w || config.websocket || true;
+config.name = command.argv.n || config.name || new Date().getTime();
 
 debug('Qufox server starting with options ' + util.inspect(config));
 
 var transports = config.websocket ? ['websocket', 'polling'] : ['polling'];
 
-new QufoxServer(config.servicePort, {transports:transports}, config.redisUrl, config.monitorServer);
+new QufoxServer({
+	listenTarget: config.servicePort,
+	socketOption: {transports:transports},
+	redisUrl: config.redisUrl,
+	monitor: config.monitorServer,
+	instanceName: config.name
+});

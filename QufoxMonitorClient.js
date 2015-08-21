@@ -2,11 +2,14 @@
 var net = require('net');
 var util = require('util');
 var debug = require('debug')('qufox:monitor');
+var tools = require('./tools');
+var hostname = require("os").hostname();
 
 exports.QufoxMonitorClient = (function(){
-	function QufoxMonitorClient (host, port, io) {
-
+	function QufoxMonitorClient (host, port, io, instanceName) {		
 		var self = this;
+		self.instanceName = instanceName;
+		self.instanceId = tools.randomString(8);
 		debug('Start connecting monitor server - ' + host + ':' + port);
 		connect(host, port, connectCallback);
 
@@ -47,28 +50,50 @@ exports.QufoxMonitorClient = (function(){
 				debug('Disconnected from ' + host + ':' + port);
 			});
 			
-		 	self.sendData('sessionList', io.sockets.adapter.rooms);
+		 	self.sendData('instanceInfo', {				
+				instanceName: self.instanceName,
+				hostname: hostname,
+				pid: process.pid
+			});
+			self.sendData('sessionList', io.sockets.adapter.rooms);
 		}
 	}
 
-	QufoxMonitorClient.prototype.sendData = function (header, payload) {
+	QufoxMonitorClient.prototype.sendData = function (type, data) {
 		var self = this;
 		if (self.isConnected && self.socket)
 		{
-			writeData(self.socket, JSON.stringify({header:header, payload:payload}));
+			var telegram = {
+				type: type, 
+				time: new Date().getTime(),
+				instanceId: self.instanceId, 
+				data: data
+			};
+
+			writeData(self.socket, createPacket(telegram));
 		}
 	};
 
-	function writeData(socket, data){
-		var success = socket.write(data);
-		if (!success){
-			debug("write data at once fail ... wait drain");
-			(function(socket, data){
+	function createPacket(data){
+		var payloadBuffer = new Buffer(JSON.stringify(data), 'utf8');
+		var headerBuffer = new Buffer(8);
+		headerBuffer.writeUIntBE(payloadBuffer.length, 0, 8);
+		return Buffer.concat([headerBuffer, payloadBuffer]);
+	}
+
+	function writeData(socket, packet){
+		var success = socket.write(packet);
+		if (success){
+			debug("Send packet ... " + packet.length + " bytes");
+		}
+		else{
+			debug("Send packet at once fail ... wait drain");
+			(function(socket, packet){
 				socket.once('drain', function(){
 					debug("Drain");					
-					writeData(socket, data);
+					writeData(socket, packet);
 				});
-			})(socket, data);
+			})(socket, packet);
 		}
 	}
 

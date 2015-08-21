@@ -4,14 +4,17 @@ var Sockets = require('socket.io');
 var tools = require('./tools');
 
 exports.QufoxServer = (function(){
-	function QufoxServer (listenTarget, option, redisUrl, monitor) {
+	function QufoxServer (options) {
 		var self = this;
-
-		var io = Sockets(listenTarget, option);
-		if (redisUrl) {
+		
+		if (typeof options == 'number') options = {listenTarget: options};		
+		if (!options) options = {listenTarget:4000};
+		
+		var io = Sockets(options.listenTarget || 4000, options.socketOption);
+		if (options.redisUrl) {
 			 io.adapter(require('socket.io-redis')({
-				pubClient : tools.createRedisClient(redisUrl, {return_buffers:true}),
-				subClient : tools.createRedisClient(redisUrl, {return_buffers:true})
+				pubClient : tools.createRedisClient(options.redisUrl, {return_buffers:true}),
+				subClient : tools.createRedisClient(options.redisUrl, {return_buffers:true})
 			}));
 		}
 
@@ -47,15 +50,15 @@ exports.QufoxServer = (function(){
 
 		debug('Qufox server is running.');
 
-		if (monitor && monitor.host && monitor.port){
+		if (options.monitor && options.monitor.host && options.monitor.port){
 			var QufoxMonitorClient = require('./QufoxMonitorClient').QufoxMonitorClient;
-			self.monitor = new QufoxMonitorClient(monitor.host, monitor.port, io);
+			self.monitor = new QufoxMonitorClient(options.monitor.host, options.monitor.port, io, options.instanceName);
 		}
 
-		function log(header, payload) {
-			debug(header + ' - ' + util.inspect(payload, false, null, true));
+		function log(type, data) {
+			debug(type + ' - ' + util.inspect(data, false, null, true));
 			if (self.monitor && self.monitor.isConnected) {
-				self.monitor.sendData(header, payload);
+				self.monitor.sendData(type, data);
 			}
 		}
 	}

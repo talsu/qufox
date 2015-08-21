@@ -27,8 +27,7 @@ Options:
 ```json
 {
 	"servicePort" : "4000",
-	"websocket" : true,
-	"isDebug" : false
+	"websocket" : true	
 }
 ```
 Unsing multiple nodes. (need redis server)
