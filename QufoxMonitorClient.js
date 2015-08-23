@@ -13,6 +13,8 @@ exports.QufoxMonitorClient = (function(){
 		debug('Start connecting monitor server - ' + host + ':' + port);
 		connect(host, port, connectCallback);
 
+		self.sendQueue = [];
+
 		function connect (host, port, callback) {
 			var socket = net.connect({host:host, port:port}, function(){
 				if (callback) callback(socket);
@@ -50,6 +52,7 @@ exports.QufoxMonitorClient = (function(){
 				debug('Disconnected from ' + host + ':' + port);
 			});
 			
+			if (self.sendQueue.length > 0) self.sendQueueData();
 		 	self.sendData('instanceInfo', {				
 				instanceName: self.instanceName,
 				hostname: hostname,
@@ -61,16 +64,33 @@ exports.QufoxMonitorClient = (function(){
 
 	QufoxMonitorClient.prototype.sendData = function (type, data) {
 		var self = this;
-		if (self.isConnected && self.socket)
-		{
-			var telegram = {
-				type: type, 
-				time: new Date().getTime(),
-				instanceId: self.instanceId, 
-				data: data
-			};
+		var telegram = {
+			type: type, 
+			time: new Date().getTime(),
+			instanceId: self.instanceId, 
+			data: data
+		};
 
-			writeData(self.socket, createPacket(telegram));
+		var packet = createPacket(telegram);
+
+		if (self.isConnected && self.socket) {
+			if (self.sendQueue.length > 0) self.sendQueueData();
+			writeData(self.socket, packet);
+		}
+		else {			
+			self.sendQueue.push(packet);
+			debug('Server disconnected ... Enqueue packet. Queue length: ' + self.sendQueue.length);
+		}
+	};
+
+	QufoxMonitorClient.prototype.sendQueueData = function () {
+		var self = this;
+		if (self.isConnected && self.socket) {
+			debug('Start send queue data ... Queue length: ' + self.sendQueue.length);
+
+			while (self.sendQueue.length > 0) writeData(self.socket, self.sendQueue.shift());
+
+			debug('Snd queue data complete.');
 		}
 	};
 

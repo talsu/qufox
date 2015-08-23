@@ -6,7 +6,7 @@ var tools = require('./tools');
 exports.QufoxServer = (function(){
 	function QufoxServer (options) {
 		var self = this;
-		
+
 		if (typeof options == 'number') options = {listenTarget: options};		
 		if (!options) options = {listenTarget:4000};
 		
@@ -57,7 +57,7 @@ exports.QufoxServer = (function(){
 
 		function log(type, data) {
 			debug(type + ' - ' + util.inspect(data, false, null, true));
-			if (self.monitor && self.monitor.isConnected) {
+			if (self.monitor) {
 				self.monitor.sendData(type, data);
 			}
 		}
