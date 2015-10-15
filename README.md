@@ -35,8 +35,7 @@ Unsing multiple nodes. (need redis server)
 {
 	"servicePort" : "4000",
 	"redisUrl" : "redis://localhost:6379",
-	"websocket" : true,
-	"isDebug" : false
+	"websocket" : true
 }
 ```
 #### Example
@@ -67,4 +66,13 @@ var QufoxServer = require('qufox').QufoxServer;
 
 new QufoxServer(4000);
 ```
+or 
+```javascript
+new QufoxServer({
+	listenTarget: 4000,
+	socketOption: {transports:['websocket', 'polling']},
+	redisUrl: "redis://localhost:6379"
+});
+```
+
 Service is running at http://localhost:4000
