@@ -1,9 +1,5 @@
 {
 	"servicePort" : "4000",
 	"redisUrl" : "",
-	"websocket" : true,	
-	"monitorServer" : {
-		"host" : "127.0.0.1",
-		"port" : 3200
-	}
+	"websocket" : true
 }
