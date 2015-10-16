@@ -19,6 +19,12 @@ exports.QufoxServer = (function () {
                 subClient : tools.createRedisClient(options.redisUrl, { return_buffers: true })
             }));
         }
+        else if (options.redisSentinel) {
+            io.adapter(require('socket.io-redis')({
+                pubClient : tools.createRedisSentinelClient(options.redisSentinel, { return_buffers: true }),
+                subClient : tools.createRedisSentinelClient(options.redisSentinel, { return_buffers: true })
+            }));
+        }
         
         io.on('connection', function (socket) {
             log('connected', { socketId: socket.id, client: socket.request.connection._peername });

@@ -1,5 +1,3 @@
 {
-	"servicePort" : "4000",
-	"redisUrl" : "",
-	"websocket" : true
+	"servicePort" : "4000"
 }
