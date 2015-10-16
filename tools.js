@@ -24,7 +24,7 @@ exports.createRedisClient = function (redisUrl, option) {
 };
 
 exports.createRedisSentinelClient = function (sentinelConfig, option) {
-    debug('CreateRedisClient - ' + util.inspect(sentinelConfig, false, null, true));
+    debug('CreateRedisSentinelClient - ' + util.inspect(sentinelConfig, false, null, true));
     if (sentinelConfig && sentinelConfig.endpoints && sentinelConfig.masterName) {
         return require('redis-sentinel').createClient(sentinelConfig.endpoints, sentinelConfig.masterName, option);
     }
