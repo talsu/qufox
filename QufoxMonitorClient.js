@@ -6,7 +6,7 @@ var tools = require('./tools');
 var hostname = require("os").hostname();
 
 exports.QufoxMonitorClient = (function(){
-	function QufoxMonitorClient (host, port, io, instanceName) {		
+	function QufoxMonitorClient (host, port, io, instanceName) {
 		var self = this;
 		self.instanceName = instanceName;
 		self.instanceId = tools.randomString(8);
@@ -18,8 +18,8 @@ exports.QufoxMonitorClient = (function(){
 		function connect (host, port, callback) {
 			var socket = net.connect({host:host, port:port}, function(){
 				if (callback) callback(socket);
-			})
-			
+			});
+
 			socket.on('error', function (err){
 				if (err.code == 'ECONNREFUSED' || err.code == 'ETIMEDOUT') {
 					debug('Socket error : '+ err.code +' - retry connect to ' + host + ':' + port);
@@ -37,8 +37,8 @@ exports.QufoxMonitorClient = (function(){
 			self.isConnected = true;
 
 			socket.on('data', function (data) {
-				debug(data.toString());				
-			});			
+				debug(data.toString());
+			});
 			socket.on('timeout', function() {
 				debug('Socket Timed Out');
 			});
@@ -47,13 +47,13 @@ exports.QufoxMonitorClient = (function(){
 				self.isConnected = false;
 				self.socket = null;
 				connect(host, port, connectCallback);
-			});			
+			});
 			socket.on('end', function() {
 				debug('Disconnected from ' + host + ':' + port);
 			});
-			
+
 			if (self.sendQueue.length > 0) self.sendQueueData();
-		 	self.sendData('instanceInfo', {				
+		 	self.sendData('instanceInfo', {
 				instanceName: self.instanceName,
 				hostname: hostname,
 				pid: process.pid
@@ -65,9 +65,9 @@ exports.QufoxMonitorClient = (function(){
 	QufoxMonitorClient.prototype.sendData = function (type, data) {
 		var self = this;
 		var telegram = {
-			type: type, 
+			type: type,
 			time: new Date().getTime(),
-			instanceId: self.instanceId, 
+			instanceId: self.instanceId,
 			data: data
 		};
 
@@ -77,7 +77,7 @@ exports.QufoxMonitorClient = (function(){
 			if (self.sendQueue.length > 0) self.sendQueueData();
 			writeData(self.socket, packet);
 		}
-		else {			
+		else {
 			self.sendQueue.push(packet);
 			debug('Server disconnected ... Enqueue packet. Queue length: ' + self.sendQueue.length);
 		}
@@ -110,7 +110,7 @@ exports.QufoxMonitorClient = (function(){
 			debug("Send packet at once fail ... wait drain");
 			(function(socket, packet){
 				socket.once('drain', function(){
-					debug("Drain");					
+					debug("Drain");
 					writeData(socket, packet);
 				});
 			})(socket, packet);
