@@ -12,13 +12,13 @@ var command = require('optimist')
 	.alias('n', 'name')
 	.check(function (argv){
 		if (argv.p && isNaN(argv.p)){
-			throw 'port must be Number.'
-		}		
+			throw 'port must be Number.';
+		}
 	});
 
 config.servicePort = process.env.PORT || command.argv.p || Number(config.servicePort) || 3000;
-config.redisUrl = process.env.REDISCLOUD_URL || command.argv.r || config.redisUrl || false;
-config.websocket = command.argv.w || config.websocket || true;
+config.redisUrl = process.env.REDIS_URL || command.argv.r || config.redisUrl || false;
+config.websocket = process.env.USE_WEBSOCKET || command.argv.w || config.websocket || true;
 config.name = command.argv.n || config.name || new Date().getTime();
 
 debug('Qufox server starting with options ' + util.inspect(config));

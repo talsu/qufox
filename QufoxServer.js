@@ -6,10 +6,10 @@ var tools = require('./tools');
 exports.QufoxServer = (function(){
 	function QufoxServer (options) {
 		var self = this;
-		
-		if (typeof options == 'number') options = {listenTarget: options};		
+
+		if (typeof options == 'number') options = {listenTarget: options};
 		if (!options) options = {listenTarget:4000};
-		
+
 		var io = Sockets(options.listenTarget || 4000, options.socketOption);
 		if (options.redisUrl) {
 			 io.adapter(require('socket.io-redis')({
@@ -20,12 +20,12 @@ exports.QufoxServer = (function(){
 
 		io.on('connection', function (socket){
 			log('connected', {socketId:socket.id, client:socket.request.connection._peername});
-			
+
 			socket.emit('connected');
-			
+
 			socket.on('join', function (sessionId) {
 				log('join', {socketId:socket.id, sessionId:sessionId});
-				socket.join(sessionId);				
+				socket.join(sessionId);
 				socket.emit('joinCallback', {id:sessionId, data:'success'});
 			});
 
@@ -49,6 +49,7 @@ exports.QufoxServer = (function(){
 		});
 
 		debug('Qufox server is running.');
+		debug(options);
 
 		if (options.monitor && options.monitor.host && options.monitor.port){
 			var QufoxMonitorClient = require('./QufoxMonitorClient').QufoxMonitorClient;
