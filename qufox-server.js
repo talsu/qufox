@@ -3,7 +3,7 @@ var debug = require('debug')('qufox');
 var Sockets = require('socket.io');
 var tools = require('./tools');
 
-exports.QufoxServer = (function () {
+module.exports = (function () {
   function QufoxServer(options) {
     var self = this;
 
