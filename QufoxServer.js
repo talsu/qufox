@@ -49,18 +49,9 @@ exports.QufoxServer = (function(){
 		});
 
 		debug('Qufox server is running.');
-		debug(options);
-
-		if (options.monitor && options.monitor.host && options.monitor.port){
-			var QufoxMonitorClient = require('./QufoxMonitorClient').QufoxMonitorClient;
-			self.monitor = new QufoxMonitorClient(options.monitor.host, options.monitor.port, io, options.instanceName);
-		}
 
 		function log(type, data) {
 			debug(type + ' - ' + util.inspect(data, false, null, true));
-			if (self.monitor && self.monitor.isConnected) {
-				self.monitor.sendData(type, data);
-			}
 		}
 	}
 

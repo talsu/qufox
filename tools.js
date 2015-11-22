@@ -28,7 +28,7 @@ exports.randomString = function (length) {
 	var numbers = '1234567890';
 	var charset = letters + letters.toUpperCase() + numbers;
 
-	function randomElement(array) {         
+	function randomElement(array) {
 		return array[Math.floor(Math.random()*array.length)];
 	}
 
@@ -36,4 +36,4 @@ exports.randomString = function (length) {
 	for(var i=0; i<length; i++)
 		result += randomElement(charset);
 	return result;
-}
+};
