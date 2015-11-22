@@ -14,7 +14,7 @@
   "bin": {
     "qufox": "./bin/qufox"
   },
-  "main": "QufoxServer.js",
+  "main": "qufox-server.js",
   "devDependencies": {},
   "author": {
     "name": "talsu",

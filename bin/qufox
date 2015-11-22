@@ -2,7 +2,7 @@
 var util = require('util');
 var debug = require('debug')('qufox');
 var config = require('../config');
-var QufoxServer = require('../QufoxServer').QufoxServer;
+var QufoxServer = require('../qufox-server').QufoxServer;
 
 var command = require('optimist')
 	.usage('Usage : $0 --port [num] --redisurl [url]')
