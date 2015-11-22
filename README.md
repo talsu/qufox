@@ -41,12 +41,12 @@ Unsing multiple nodes. (need redis server)
 }
 ```
 #### Example
-#####Server side
+##### Server side
 ```bash
 $ qufox --port 4000
 ```
 Service is running at http://localhost:4000
-#####Client side
+##### Client side
 ```html
 <script src="./bower_components/socket.io-client/socket.io.js"></script>
 <script src="./javascripts/qufox-client.js"></script>
@@ -64,7 +64,7 @@ Alert popup appears on the first page when you open two same pages.
 
 ### Module
 ```javascript
-var QufoxServer = require('qufox').QufoxServer;
+var QufoxServer = require('qufox');
 
 new QufoxServer(4000);
 ```
