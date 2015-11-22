@@ -1,9 +1,11 @@
 Qufox
 ========
 
+[![npm version](https://badge.fury.io/js/qufox.svg)](https://badge.fury.io/js/qufox)
+
 node.js smiple web messaging server.
 
-service is running at http://qufox.com
+service is running at http://qufox.com and https://talk.talsu.net
 
 ## Installation
 
@@ -27,7 +29,7 @@ Options:
 ```json
 {
 	"servicePort" : "4000",
-	"websocket" : true	
+	"websocket" : true
 }
 ```
 Unsing multiple nodes. (need redis server)
@@ -35,8 +37,7 @@ Unsing multiple nodes. (need redis server)
 {
 	"servicePort" : "4000",
 	"redisUrl" : "redis://localhost:6379",
-	"websocket" : true,
-	"isDebug" : false
+	"websocket" : true
 }
 ```
 #### Example
@@ -67,4 +68,17 @@ var QufoxServer = require('qufox').QufoxServer;
 
 new QufoxServer(4000);
 ```
+or
+```javascript
+new QufoxServer({
+	listenTarget: 4000,
+	socketOption: {transports:['websocket', 'polling']},
+	redisUrl: "redis://localhost:6379"
+});
+```
+
 Service is running at http://localhost:4000
+
+## Client
+
+qufox client code is in [qufox-client](https://github.com/talsu/qufox-client).

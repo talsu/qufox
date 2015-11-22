@@ -1,0 +1,17 @@
+{
+  "servicePort": "4000",
+  "redisUrl": "redis://127.0.0.1:6379",
+  "websocket": true,
+  "monitorServer": {
+    "host": "127.0.0.1",
+    "port": 4100
+  },
+  "name": "appserver1",
+  "redisSentinel": {
+    "endpoints": [
+      { "host": "127.0.0.1", "port": 26379 },
+      { "host": "127.0.0.2", "port": 26380 }
+    ],
+    "masterName": "mymaster"
+  }
+}
