@@ -2,7 +2,31 @@ var redis = require("redis");
 var util = require('util');
 var debug = require('debug')('qufox');
 
-exports.createRedisClient = function (redisUrl, option) {
+exports.setRedisAdapter = function (io, option) {
+  var pubClient = createRedisClient(option, { return_buffers: true });
+  var subClient = createRedisClient(option, { return_buffers: true });
+  setRedisClientKeepAlivePing(pubClient);
+  setRedisEventLog(pubClient, 'PUB');
+  setRedisEventLog(subClient, 'SUB');
+  io.adapter(require('socket.io-redis')({
+    pubClient : pubClient,
+    subClient : subClient
+  }));
+};
+
+exports.setRedisSentinelAdapter = function (io, option) {
+  var pubSentinelClient = createRedisSentinelClient(option, { return_buffers: true });
+  var subSentinelClient = createRedisSentinelClient(option, { return_buffers: true });
+  setRedisClientKeepAlivePing(pubSentinelClient);
+  setRedisEventLog(pubSentinelClient, 'PUB');
+  setRedisEventLog(subSentinelClient, 'SUB');
+  io.adapter(require('socket.io-redis')({
+    pubClient : pubSentinelClient,
+    subClient : subSentinelClient
+  }));
+};
+
+function createRedisClient (redisUrl, option) {
   debug('CreateRedisClient - ' + redisUrl);
   if (redisUrl) {
     var rtg = require("url").parse(redisUrl);
@@ -21,14 +45,55 @@ exports.createRedisClient = function (redisUrl, option) {
   else {
     return redis.createClient("127.0.0.1", 6379, option);
   }
-};
+}
 
-exports.createRedisSentinelClient = function (sentinelConfig, option) {
+function createRedisSentinelClient  (sentinelConfig, option) {
   debug('CreateRedisSentinelClient - ' + util.inspect(sentinelConfig, false, null, true));
   if (sentinelConfig && sentinelConfig.endpoints && sentinelConfig.masterName) {
     return require('redis-sentinel').createClient(sentinelConfig.endpoints, sentinelConfig.masterName, option);
   }
-};
+}
+
+function setRedisEventLog (redisClient, tag){
+  redisClient.on('ready', function () { debug('REDIS[' + tag + '] - ready'); });
+  redisClient.on('connect', function () {debug('REDIS[' + tag + '] - connect ');});
+  redisClient.on('error', function (err) {debug('REDIS[' + tag + '] - error : ' + util.inspect(err));});
+  redisClient.on('end', function () {debug('REDIS[' + tag + '] - end');});
+  redisClient.on('drain', function () {debug('REDIS[' + tag + '] - drain');});
+
+  return redisClient;
+}
+
+function setRedisClientKeepAlivePing (redisClient){
+  var pingTimer = null;
+  redisClient.on('ready', function () {
+    if (pingTimer) {
+      clearInterval(pingTimer);
+      pingTimer = null;
+      debug('clear exists ping timer.');
+    }
+
+    pingTimer = setInterval(function(){
+      redisClient.ping(function(err, result){
+        if (err){
+          debug(util.inspect(err));
+          debug(util.inspect(result));
+        }
+      });
+    }, 10000);
+
+    debug('redis ping timer created.');
+  });
+
+  redisClient.on('end', function(){
+    if (pingTimer) {
+      clearInterval(pingTimer);
+      pingTimer = null;
+      debug('remove ping timer.');
+    }
+  });
+  return redisClient;
+}
 
 exports.randomString = function (length) {
   var letters = 'abcdefghijklmnopqrstuvwxyz';

@@ -1,6 +1,6 @@
 {
   "name": "qufox",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "scripts": {
     "start": "node bin/qufox"
   },
@@ -10,7 +10,7 @@
     "redis": "^2.3.1",
     "redis-sentinel": "^0.3.3",
     "socket.io": "^1.3.7",
-    "socket.io-redis": "^0.1.4"
+    "socket.io-redis": "^0.2.0"
   },
   "bin": {
     "qufox": "./bin/qufox"

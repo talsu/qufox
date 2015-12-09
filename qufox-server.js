@@ -14,16 +14,10 @@ module.exports = (function () {
 
     var io = Sockets(options.listenTarget || 4000, options.socketOption);
     if (options.redisUrl) {
-      io.adapter(require('socket.io-redis')({
-        pubClient : tools.createRedisClient(options.redisUrl, { return_buffers: true }),
-        subClient : tools.createRedisClient(options.redisUrl, { return_buffers: true })
-      }));
+      tools.setRedisAdapter(io, options.redisUrl);
     }
     else if (options.redisSentinel) {
-      io.adapter(require('socket.io-redis')({
-        pubClient : tools.createRedisSentinelClient(options.redisSentinel, { return_buffers: true }),
-        subClient : tools.createRedisSentinelClient(options.redisSentinel, { return_buffers: true })
-      }));
+      tools.setRedisSentinelAdapter(io, options.redisSentinel);
     }
 
     io.on('connection', function (socket) {
