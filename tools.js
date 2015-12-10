@@ -6,7 +6,6 @@ exports.createRedisAdapter = function (option, callback){
   var pubClient = createRedisClient(option);
   var subClient = createRedisClient(option);
   setRedisClientKeepAlivePing(pubClient);
-  // setRedisClientKeepAlivePing(subClient);
   setRedisEventLog(pubClient, 'PUB');
   setRedisEventLog(subClient, 'SUB');
   var adapter = require('socket.io-ioredis')({
@@ -15,11 +14,11 @@ exports.createRedisAdapter = function (option, callback){
   });
   var isPubReady = false;
   var isSubReady = false;
-  pubClient.on('ready', function (){
+  pubClient.once('ready', function (){
     if (isSubReady) callback(adapter);
     else isPubReady = true;
   });
-  subClient.on('ready', function (){
+  subClient.once('ready', function (){
     if (isPubReady) callback(adapter);
     else isSubReady = true;
   });
@@ -29,7 +28,6 @@ exports.createRedisSentinelAdapter = function (option, callback){
   var pubSentinelClient = createRedisSentinelClient(option);
   var subSentinelClient = createRedisSentinelClient(option);
   setRedisClientKeepAlivePing(pubSentinelClient);
-  // setRedisClientKeepAlivePing(subSentinelClient);
   setRedisEventLog(pubSentinelClient, 'PUB');
   setRedisEventLog(subSentinelClient, 'SUB');
   var adapter = require('socket.io-ioredis')({
@@ -38,11 +36,11 @@ exports.createRedisSentinelAdapter = function (option, callback){
   });
   var isPubReady = false;
   var isSubReady = false;
-  pubSentinelClient.on('ready', function (){
+  pubSentinelClient.once('ready', function (){
     if (isSubReady) callback(adapter);
     else isPubReady = true;
   });
-  subSentinelClient.on('ready', function (){
+  subSentinelClient.once('ready', function (){
     if (isPubReady) callback(adapter);
     else isSubReady = true;
   });
