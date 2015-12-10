@@ -14,7 +14,7 @@ module.exports = (function () {
     if (options.redisUrl)
       tools.createRedisAdapter(options.redisUrl, runServer);
     else if (options.redisSentinel)
-      tools.createRedisSentinelAdapter(options.redisUrl, runServer);
+      tools.createRedisSentinelAdapter(options.redisSentinel, runServer);
     else
       runServer();
 
