@@ -6,6 +6,7 @@ exports.setRedisAdapter = function (io, option) {
   var pubClient = createRedisClient(option, { return_buffers: true });
   var subClient = createRedisClient(option, { return_buffers: true });
   setRedisClientKeepAlivePing(pubClient);
+  setRedisClientKeepAlivePing(subClient);
   setRedisEventLog(pubClient, 'PUB');
   setRedisEventLog(subClient, 'SUB');
   io.adapter(require('socket.io-ioredis')({
@@ -18,6 +19,7 @@ exports.setRedisSentinelAdapter = function (io, option) {
   var pubSentinelClient = createRedisSentinelClient(option, { return_buffers: true });
   var subSentinelClient = createRedisSentinelClient(option, { return_buffers: true });
   setRedisClientKeepAlivePing(pubSentinelClient);
+  setRedisClientKeepAlivePing(subSentinelClient);
   setRedisEventLog(pubSentinelClient, 'PUB');
   setRedisEventLog(subSentinelClient, 'SUB');
   io.adapter(require('socket.io-ioredis')({
@@ -79,7 +81,7 @@ function setRedisClientKeepAlivePing (redisClient){
     pingTimer = setInterval(function(){
       redisClient.ping(function(err, result){
         if (err){
-          debug(util.inspect(err));
+          debug('REDIS - ping error ' + util.inspect(err));
           debug(util.inspect(result));
         }
       });
