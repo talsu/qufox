@@ -8,7 +8,7 @@ exports.setRedisAdapter = function (io, option) {
   setRedisClientKeepAlivePing(pubClient);
   setRedisEventLog(pubClient, 'PUB');
   setRedisEventLog(subClient, 'SUB');
-  io.adapter(require('socket.io-redis')({
+  io.adapter(require('socket.io-ioredis')({
     pubClient : pubClient,
     subClient : subClient
   }));
@@ -20,7 +20,7 @@ exports.setRedisSentinelAdapter = function (io, option) {
   setRedisClientKeepAlivePing(pubSentinelClient);
   setRedisEventLog(pubSentinelClient, 'PUB');
   setRedisEventLog(subSentinelClient, 'SUB');
-  io.adapter(require('socket.io-redis')({
+  io.adapter(require('socket.io-ioredis')({
     pubClient : pubSentinelClient,
     subClient : subSentinelClient
   }));
