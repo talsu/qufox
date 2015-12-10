@@ -2,60 +2,60 @@ var redis = require("ioredis");
 var util = require('util');
 var debug = require('debug')('qufox');
 
-exports.setRedisAdapter = function (io, option) {
-  var pubClient = createRedisClient(option, { return_buffers: true });
-  var subClient = createRedisClient(option, { return_buffers: true });
+exports.createRedisAdapter = function (option, callback){
+  var pubClient = createRedisClient(option);
+  var subClient = createRedisClient(option);
   setRedisClientKeepAlivePing(pubClient);
   setRedisClientKeepAlivePing(subClient);
   setRedisEventLog(pubClient, 'PUB');
   setRedisEventLog(subClient, 'SUB');
-  io.adapter(require('socket.io-ioredis')({
+  var adapter = require('socket.io-ioredis')({
     pubClient : pubClient,
     subClient : subClient
-  }));
+  });
+  var isPubReady = false;
+  var isSubReady = false;
+  pubClient.on('ready', function (){
+    if (isSubReady) callback(adapter);
+    else isPubReady = true;
+  });
+  subClient.on('ready', function (){
+    if (isPubReady) callback(adapter);
+    else isSubReady = true;
+  });
 };
 
-exports.setRedisSentinelAdapter = function (io, option) {
-  var pubSentinelClient = createRedisSentinelClient(option, { return_buffers: true });
-  var subSentinelClient = createRedisSentinelClient(option, { return_buffers: true });
+exports.createRedisSentinelAdapter = function (option, callback){
+  var pubSentinelClient = createRedisSentinelClient(option);
+  var subSentinelClient = createRedisSentinelClient(option);
   setRedisClientKeepAlivePing(pubSentinelClient);
   setRedisClientKeepAlivePing(subSentinelClient);
   setRedisEventLog(pubSentinelClient, 'PUB');
   setRedisEventLog(subSentinelClient, 'SUB');
-  io.adapter(require('socket.io-ioredis')({
+  var adapter = require('socket.io-ioredis')({
     pubClient : pubSentinelClient,
     subClient : subSentinelClient
-  }));
+  });
+  var isPubReady = false;
+  var isSubReady = false;
+  pubSentinelClient.on('ready', function (){
+    if (isSubReady) callback(adapter);
+    else isPubReady = true;
+  });
+  subSentinelClient.on('ready', function (){
+    if (isPubReady) callback(adapter);
+    else isSubReady = true;
+  });
 };
 
-function createRedisClient (redisUrl, option) {
+function createRedisClient (redisUrl) {
   debug('CreateRedisClient - ' + redisUrl);
   return new redis(redisUrl);
-  // if (redisUrl) {
-  //   var rtg = require("url").parse(redisUrl);
-  //   var redisClient = redis.createClient(rtg.port || 6379, rtg.hostname, option);
-  //   if (rtg.auth) {
-  //     var authString = rtg.auth;
-  //     if (authString.indexOf(':') !== -1) {
-  //       authString = authString.split(":")[1];
-  //     }
-  //
-  //     redisClient.auth(authString);
-  //   }
-  //
-  //   return redisClient;
-  // }
-  // else {
-  //   return redis.createClient("127.0.0.1", 6379, option);
-  // }
 }
 
-function createRedisSentinelClient  (sentinelConfig, option) {
+function createRedisSentinelClient  (sentinelConfig) {
   debug('CreateRedisSentinelClient - ' + util.inspect(sentinelConfig, false, null, true));
   return new redis({sentinels:sentinelConfig.endpoints, name:sentinelConfig.masterName});
-  // if (sentinelConfig && sentinelConfig.endpoints && sentinelConfig.masterName) {
-  //   return require('redis-sentinel').createClient(sentinelConfig.endpoints, sentinelConfig.masterName, option);
-  // }
 }
 
 function setRedisEventLog (redisClient, tag){
