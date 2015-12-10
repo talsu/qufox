@@ -1,4 +1,4 @@
-var redis = require("redis");
+var redis = require("ioredis");
 var util = require('util');
 var debug = require('debug')('qufox');
 
@@ -28,30 +28,32 @@ exports.setRedisSentinelAdapter = function (io, option) {
 
 function createRedisClient (redisUrl, option) {
   debug('CreateRedisClient - ' + redisUrl);
-  if (redisUrl) {
-    var rtg = require("url").parse(redisUrl);
-    var redisClient = redis.createClient(rtg.port || 6379, rtg.hostname, option);
-    if (rtg.auth) {
-      var authString = rtg.auth;
-      if (authString.indexOf(':') !== -1) {
-        authString = authString.split(":")[1];
-      }
-
-      redisClient.auth(authString);
-    }
-
-    return redisClient;
-  }
-  else {
-    return redis.createClient("127.0.0.1", 6379, option);
-  }
+  return new redis(redisUrl);
+  // if (redisUrl) {
+  //   var rtg = require("url").parse(redisUrl);
+  //   var redisClient = redis.createClient(rtg.port || 6379, rtg.hostname, option);
+  //   if (rtg.auth) {
+  //     var authString = rtg.auth;
+  //     if (authString.indexOf(':') !== -1) {
+  //       authString = authString.split(":")[1];
+  //     }
+  //
+  //     redisClient.auth(authString);
+  //   }
+  //
+  //   return redisClient;
+  // }
+  // else {
+  //   return redis.createClient("127.0.0.1", 6379, option);
+  // }
 }
 
 function createRedisSentinelClient  (sentinelConfig, option) {
   debug('CreateRedisSentinelClient - ' + util.inspect(sentinelConfig, false, null, true));
-  if (sentinelConfig && sentinelConfig.endpoints && sentinelConfig.masterName) {
-    return require('redis-sentinel').createClient(sentinelConfig.endpoints, sentinelConfig.masterName, option);
-  }
+  return new redis({sentinels:sentinelConfig.endpoints, name:sentinelConfig.masterName});
+  // if (sentinelConfig && sentinelConfig.endpoints && sentinelConfig.masterName) {
+  //   return require('redis-sentinel').createClient(sentinelConfig.endpoints, sentinelConfig.masterName, option);
+  // }
 }
 
 function setRedisEventLog (redisClient, tag){
@@ -59,7 +61,8 @@ function setRedisEventLog (redisClient, tag){
   redisClient.on('connect', function () {debug('REDIS[' + tag + '] - connect ');});
   redisClient.on('error', function (err) {debug('REDIS[' + tag + '] - error : ' + util.inspect(err));});
   redisClient.on('end', function () {debug('REDIS[' + tag + '] - end');});
-  redisClient.on('drain', function () {debug('REDIS[' + tag + '] - drain');});
+  redisClient.on('close', function () {debug('REDIS[' + tag + '] - close');});
+  redisClient.on('reconnecting', function () {debug('REDIS[' + tag + '] - reconnecting');});
 
   return redisClient;
 }

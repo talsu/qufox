@@ -5,14 +5,13 @@ var tools = require('./tools');
 
 module.exports = (function () {
   function QufoxServer(options) {
-    var self = this;
-
     if (typeof options == 'number') options = { listenTarget: options };
     if (!options) options = { listenTarget: 4000 };
     if (!options.socketOption) options.socketOption = {};
     if (!options.socketOption.path) options.socketOption.path = '/qufox.io';
 
     var io = Sockets(options.listenTarget || 4000, options.socketOption);
+    this.io = io;
     if (options.redisUrl) {
       tools.setRedisAdapter(io, options.redisUrl);
     }
