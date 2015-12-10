@@ -6,7 +6,7 @@ exports.createRedisAdapter = function (option, callback){
   var pubClient = createRedisClient(option);
   var subClient = createRedisClient(option);
   setRedisClientKeepAlivePing(pubClient);
-  setRedisClientKeepAlivePing(subClient);
+  // setRedisClientKeepAlivePing(subClient);
   setRedisEventLog(pubClient, 'PUB');
   setRedisEventLog(subClient, 'SUB');
   var adapter = require('socket.io-ioredis')({
@@ -29,7 +29,7 @@ exports.createRedisSentinelAdapter = function (option, callback){
   var pubSentinelClient = createRedisSentinelClient(option);
   var subSentinelClient = createRedisSentinelClient(option);
   setRedisClientKeepAlivePing(pubSentinelClient);
-  setRedisClientKeepAlivePing(subSentinelClient);
+  // setRedisClientKeepAlivePing(subSentinelClient);
   setRedisEventLog(pubSentinelClient, 'PUB');
   setRedisEventLog(subSentinelClient, 'SUB');
   var adapter = require('socket.io-ioredis')({
