@@ -3,7 +3,6 @@ var util = require('util');
 var debug = require('debug')('qufox');
 var cluster = require('cluster');
 var QufoxServer = require('../qufox-server');
-var QufoxClient = require('../client/qufox-client');
 
 debug('Start Test.');
 
@@ -19,6 +18,20 @@ if (cluster.isMaster) {
 
   cluster.on('listening', function (worker, address){
     debug('worker ' + worker.id + ' listening '+address.address+':'+address.port+' [pid:'+worker.process.pid+']');
+
+    var client1 = require('qufox-client')('http://localhost:' + address.port);
+
+    client1.join('testSession',
+    function (packet){
+      debug(packet);
+    }, function (){
+      debug('join complete');
+      client1.send('testSession', 'echo complete', true);
+      //
+      // var client2 = require('../index')(serverUrl, options);
+      // setStatusChangedLog(client2, 'client2');
+      // client2.send('testSession', 'send complete');
+    });
   });
 }
 else {
@@ -30,7 +43,6 @@ else {
   });
 }
 
-debug(new QufoxClient());
 //
 // for (var index = 0; index < 1000; ++index){
 //
