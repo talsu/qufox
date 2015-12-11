@@ -11,16 +11,12 @@ module.exports = (function () {
     if (!options.socketOption) options.socketOption = {};
     if (!options.socketOption.path) options.socketOption.path = '/qufox.io';
 
-    if (options.redisUrl)
-      tools.createRedisAdapter(options.redisUrl, runServer);
-    else if (options.redisSentinel)
-      tools.createRedisSentinelAdapter(options.redisSentinel, runServer);
-    else
-      runServer();
+    if (options.redisUrl) tools.createRedisAdapter(options.redisUrl, runServer);
+    else if (options.redisSentinel) tools.createRedisSentinelAdapter(options.redisSentinel, runServer);
+    else runServer();
 
     function runServer(adapter){
-      var io = Sockets(options.listenTarget || 4000, options.socketOption);
-      self.io = io;
+      var io = Sockets(options.listenTarget || 4000, options.socketOption);      
       if (adapter) io.adapter(adapter);
 
       io.on('connection', function (socket) {

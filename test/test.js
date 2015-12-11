@@ -3,6 +3,7 @@ var util = require('util');
 var debug = require('debug')('qufox');
 var cluster = require('cluster');
 var QufoxServer = require('../qufox-server');
+var QufoxClient = require('../client/qufox-client');
 
 debug('Start Test.');
 
@@ -28,6 +29,8 @@ else {
     instanceName: 'test',
   });
 }
+
+debug(new QufoxClient());
 //
 // for (var index = 0; index < 1000; ++index){
 //
