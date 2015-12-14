@@ -2,21 +2,24 @@
   "name": "qufox",
   "version": "0.2.4",
   "scripts": {
-    "start": "node bin/qufox"
+    "start": "node bin/qufox",
+    "test": "node test/test.js"
   },
   "dependencies": {
     "debug": "^2.2.0",
+    "ioredis": "^1.13.0",
     "optimist": "^0.6.1",
-    "redis": "^2.3.1",
-    "redis-sentinel": "^0.3.3",
     "socket.io": "^1.3.7",
-    "socket.io-redis": "^0.2.0"
+    "socket.io-ioredis": "^1.0.1"
   },
   "bin": {
     "qufox": "./bin/qufox"
   },
   "main": "qufox-server.js",
-  "devDependencies": {},
+  "devDependencies": {
+    "async": "^1.5.0",
+    "qufox-client": "^0.2.5"
+  },
   "author": {
     "name": "talsu",
     "email": "talsu84@gmail.com",
