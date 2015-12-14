@@ -20,8 +20,6 @@ var clientOptions = {
 function ServerStartAndStopTest(callback){
   var server = new QufoxServer({
     listenTarget: portBase,
-    redisUrl: 'redis://localhost',
-    // redisSentinel: config.redisSentinel,
     instanceName: 'test',
   });
 
