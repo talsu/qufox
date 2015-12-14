@@ -12,5 +12,12 @@
       "masterName": "mymaster"
     },
     "numberOfInstance": 10
+  },
+  "MultipleServerTest": {
+    "urls": [
+      "http://localhost:14000",
+      "http://localhost:14001",
+      "http://localhost:14002"
+    ]
   }
 }

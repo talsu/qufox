@@ -51,7 +51,7 @@ function RedisAdaptorTest(callback){
   }
 
   var servers = null;
-  var sessionName = 'session-sendTest';
+  // var sessionName = 'session-sendTest';
 
   STEP0_createServers();
 
@@ -99,39 +99,45 @@ function RedisAdaptorTest(callback){
         return;
       }
       debug(clients.length + ' clients are connected.');
-      STEP2_join(clients);
+      STEP2_SendTest(clients);
     });
   }
 
-  function STEP2_join(clients){
-    debug('STEP2_join');
-    var receiveCount = 0;
-    async.each(clients, function (client, callback){
-      client.join(sessionName, function receiveCallback(packet){
-        debug('packet received');
-        if (packet == 'sendTest'){
-          ++receiveCount;
-        }
-
-        if (receiveCount == clients.length - 1){
-          STEP3_leave(clients);
-        }
-      }, callback);
-    }, function(){
-      debug('join complete');
-      clients[0].send(sessionName, 'sendTest');
-    });
-  }
-
-  function STEP3_leave(clients){
-    debug('STEP3_leave');
-    async.each(clients, function (client, callback){
-      client.leave(sessionName, null, callback);
-    }, function(){
-      debug('leave complete');
+  function STEP2_SendTest(clients){
+    clientsCommunicationTest(clients, function(){
       STEP4_close(clients);
     });
   }
+
+  // function STEP2_join(clients){
+  //   debug('STEP2_join');
+  //   var receiveCount = 0;
+  //   async.each(clients, function (client, callback){
+  //     client.join(sessionName, function receiveCallback(packet){
+  //       debug('packet received');
+  //       if (packet == 'sendTest'){
+  //         ++receiveCount;
+  //       }
+  //
+  //       if (receiveCount == clients.length - 1){
+  //         STEP3_leave(clients);
+  //       }
+  //     }, callback);
+  //   }, function(){
+  //     debug('join complete');
+  //     clients[0].send(sessionName, 'sendTest');
+  //   });
+  // }
+  //
+  // function STEP3_leave(clients){
+  //   debug('STEP3_leave');
+  //   async.each(clients, function (client, callback){
+  //     client.leave(sessionName, null, callback);
+  //   }, function(){
+  //     debug('leave complete');
+  //     STEP4_close(clients);
+  //   });
+  // }
 
   function STEP4_close(clients){
     debug('STEP4_close');
@@ -146,9 +152,93 @@ function RedisAdaptorTest(callback){
   }
 }
 
-var tests = [ ServerStartAndStopTest ];
+function BasicServerTest(callback){
+  var server = new QufoxServer({
+    listenTarget: portBase,
+    // redisSentinel: config.redisSentinel,
+    instanceName: 'test',
+  });
+
+  server.on('listening', function(){
+    var client1 = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
+    var client2 = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
+    var client3 = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
+    var client4 = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
+    clientsCommunicationTest([client1, client2, client3, client4], function(){
+      server.close();
+      console.log('BasicServerTest - Success');
+      callback();
+    });
+  });
+
+  server.on('close', function(){
+  });
+}
+
+function MultipleServerTest(callback){
+  var clients = config.MultipleServerTest.urls.map(function (url){
+    return require('qufox-client')(url, clientOptions);
+  });
+
+  clientsCommunicationTest(clients, function(){
+    console.log('MultipleServerTest - Success');
+    callback();
+  });
+}
+
+function clientsCommunicationTest(clients, callback){
+  var sessionName = 'testSession';
+  var resultsArray = [];
+  for (var i = 0; i < clients.length; ++i){
+    clients[i].index = i;
+    resultsArray[i] = new Array(clients.length);
+    for (var j = 0; j < clients.length; ++j) {
+      resultsArray[i][j] = false;
+    }
+    resultsArray[i][i] = true;
+  }
+
+  checkResults();
+
+  async.each(clients, function (client, next){
+    client.join(sessionName, function(clientIndex){
+      resultsArray[client.index][clientIndex] = true;
+      if (checkResults()){
+        debug('Communicate all success.');
+        callback();
+      }
+    }, next);
+  }, function (err){
+    debug('all joined.');
+    clients.forEach(function (client){
+      client.send(sessionName, client.index);
+    });
+  });
+
+  function checkResults(){
+    debug('---- result array ----');
+    resultsArray.forEach(function(results){
+      var printArray = results.map(function(result){ return result ? 1 : 0; });
+      debug(printArray);
+    });
+
+    var allDone = resultsArray.every(function (results){
+      return results.every(function (result){ return result; });
+    });
+
+    debug(allDone);
+
+    return allDone;
+  }
+}
+
+var tests = [
+  ServerStartAndStopTest,
+  BasicServerTest
+];
 
 if (config.RedisAdaptorTest) tests.push(RedisAdaptorTest);
+if (config.MultipleServerTest) tests.push(MultipleServerTest);
 
 async.waterfall(tests, function (err){
   if (err) {
