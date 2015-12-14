@@ -1,4 +1,5 @@
 var util = require('util');
+var EventEmitter = require('events');
 var debug = require('debug')('qufox');
 var Sockets = require('socket.io');
 var tools = require('./tools');
@@ -16,7 +17,8 @@ module.exports = (function () {
     else runServer();
 
     function runServer(adapter){
-      var io = Sockets(options.listenTarget || 4000, options.socketOption);      
+      var io = Sockets(options.listenTarget || 4000, options.socketOption);
+      self._io = io;
       if (adapter) io.adapter(adapter);
 
       io.on('connection', function (socket) {
@@ -52,14 +54,30 @@ module.exports = (function () {
         });
       });
 
+      io.httpServer.on('listening', function (){
+        self.emit('listening');
+        debug('server is listening.');
+      });
+
+      io.httpServer.on('close', function (){
+        self.emit('close');
+        debug('server is closed.');
+      });
+
       debug('Qufox server is running.');
     }
-
 
     function log(type, data) {
       debug(type + ' - ' + util.inspect(data, false, null, true));
     }
   }
+
+  util.inherits(QufoxServer, EventEmitter);
+  
+  QufoxServer.prototype.close = function (callback){
+    if (this._io)
+      this._io.close();
+  };
 
   return QufoxServer;
 })();
