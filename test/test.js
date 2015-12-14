@@ -158,11 +158,13 @@ function BasicServerTest(callback){
   });
 
   server.on('listening', function(){
-    var client1 = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
-    var client2 = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
-    var client3 = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
-    var client4 = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
-    clientsCommunicationTest([client1, client2, client3, client4], function(){
+    var clients = [];
+    for (var i = 0; i < 10; ++i){
+      clients.push(
+        require('qufox-client')('http://localhost:' + (portBase), clientOptions)
+      );
+    }
+    clientsCommunicationTest(clients, function(){
       server.close();
       console.log('BasicServerTest - Success');
       callback();
@@ -196,12 +198,15 @@ function clientsCommunicationTest(clients, callback){
     resultsArray[i][i] = true;
   }
 
-  checkResults();
+  checkResults(true);
+  var intervalJob = setInterval(function(){checkResults(true);}, 1000);
 
   async.each(clients, function (client, next){
     client.join(sessionName, function(clientIndex){
       resultsArray[client.index][clientIndex] = true;
       if (checkResults()){
+        checkResults(true);
+        clearInterval(intervalJob);
         debug('Communicate all success.');
         callback();
       }
@@ -213,18 +218,18 @@ function clientsCommunicationTest(clients, callback){
     });
   });
 
-  function checkResults(){
-    debug('---- result array ----');
+  function checkResults(isPrint){
+    if (isPrint) debug('---- result array ----');
     resultsArray.forEach(function(results){
       var printArray = results.map(function(result){ return result ? 1 : 0; });
-      debug(printArray);
+      if (isPrint) debug(printArray);
     });
 
     var allDone = resultsArray.every(function (results){
       return results.every(function (result){ return result; });
     });
 
-    debug(allDone);
+    if (isPrint) debug(allDone);
 
     return allDone;
   }
