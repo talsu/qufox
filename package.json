@@ -1,6 +1,6 @@
 {
   "name": "qufox",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "scripts": {
     "start": "node bin/qufox",
     "test": "node test/test.js"
