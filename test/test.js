@@ -214,7 +214,9 @@ function clientsCommunicationTest(clients, callback){
   }, function (err){
     debug('all joined.');
     clients.forEach(function (client){
-      client.send(sessionName, client.index);
+      setTimeout(function(){
+        client.send(sessionName, client.index);
+      }, 500 * client.index);      
     });
   });
 
