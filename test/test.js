@@ -17,147 +17,63 @@ var clientOptions = {
   'force new connection': true
 };
 
-function ServerStartAndStopTest(callback){
-  var server = new QufoxServer({
-    listenTarget: portBase,
-    instanceName: 'test',
+describe('QufoxServer Test', function () {
+  var server = null;
+
+  before(function (done){
+    server = new QufoxServer({
+      listenTarget: portBase,
+      instanceName: 'test',
+    });
+    server.on('listening', done);
   });
 
-  server.on('listening', function(){
+  it('Server start', function (done) {
     var client = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
     client.onStatusChanged(function(status){
-      debug(status);
       if (status == 'connected') {
-        server.close();
-      }
-      if (status == 'disconnect'){
         client.close();
-        console.log('ServerStartAndStopTest - Success');
-        callback();
+        done();
       }
     });
   });
 
-  server.on('close', function(){
-  });
-}
-
-function RedisAdaptorTest(callback){
-  var indexs = [];
-  for (var i = 0; i < config.RedisAdaptorTest.numberOfInstance; ++i){
-    indexs.push(i);
-  }
-
-  var servers = null;
-  // var sessionName = 'session-sendTest';
-
-  STEP0_createServers();
-
-  function STEP0_createServers(){
-    debug('STEP0_createServers');
-    async.mapSeries(indexs, function (index, callback){
-      var server = new QufoxServer({
-        listenTarget: portBase + index,
-        redisUrl: config.RedisAdaptorTest.redisUrl,
-        // redisSentinel: config.redisSentinel,
-        instanceName: 'test' + index,
-      });
-
-      server.on('listening', function (){
-        debug('Server ' + index + ' is listening.');
-        callback(null, server);
-      });
-    }, function (err, results){
-      if (err) {
-        debug(err);
-        return;
-      }
-      servers = results;
-      debug(indexs.length + ' servers are listening.');
-      STEP1_createClients();
+  it('Echo message', function (done){
+    this.timeout(5000);
+    var sessionName = 'echoSession';
+    var testMessage = 'this is a test.';
+    var client = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
+    client.join(sessionName, function (message){
+      assert.equal(message, testMessage);
+      client.close();
+      done();
+    }, function (){
+      client.send(sessionName, testMessage, true);
     });
-  }
-
-  function STEP1_createClients(){
-    debug('STEP1_createClients');
-    async.map(indexs, function (index, callback){
-      var client = require('qufox-client')('http://localhost:' + (portBase + index), clientOptions);
-      var isCallbackCalled = false;
-      client.onStatusChanged(function(status){
-        if ('connected') {
-          if (!isCallbackCalled) {
-            isCallbackCalled = true;
-            callback(null, client);
-          }
-        }
-      });
-    }, function (err, clients){
-      if (err) {
-        debug(err);
-        return;
-      }
-      debug(clients.length + ' clients are connected.');
-      STEP2_SendTest(clients);
-    });
-  }
-
-  function STEP2_SendTest(clients){
-    clientsCommunicationTest(clients, function(){
-      STEP4_close(clients);
-    });
-  }
-
-  // function STEP2_join(clients){
-  //   debug('STEP2_join');
-  //   var receiveCount = 0;
-  //   async.each(clients, function (client, callback){
-  //     client.join(sessionName, function receiveCallback(packet){
-  //       debug('packet received');
-  //       if (packet == 'sendTest'){
-  //         ++receiveCount;
-  //       }
-  //
-  //       if (receiveCount == clients.length - 1){
-  //         STEP3_leave(clients);
-  //       }
-  //     }, callback);
-  //   }, function(){
-  //     debug('join complete');
-  //     clients[0].send(sessionName, 'sendTest');
-  //   });
-  // }
-  //
-  // function STEP3_leave(clients){
-  //   debug('STEP3_leave');
-  //   async.each(clients, function (client, callback){
-  //     client.leave(sessionName, null, callback);
-  //   }, function(){
-  //     debug('leave complete');
-  //     STEP4_close(clients);
-  //   });
-  // }
-
-  function STEP4_close(clients){
-    debug('STEP4_close');
-    clients.forEach(function (client){ client.close(); });
-    async.each(servers, function (server, callback){
-      server.once('close', function () {callback();});
-      server.close();
-    }, function(){
-      console.log('RedisAdaptorTest - Success');
-      callback();
-    });
-  }
-}
-
-function BasicServerTest(callback){
-  var server = new QufoxServer({
-    listenTarget: portBase,
-    // redisSentinel: config.redisSentinel,
-    instanceName: 'test',
   });
 
-  server.on('listening', function(){
+  it('Send message', function (done){
+    this.timeout(5000);
+    var sessionName = 'SendMessageSession';
+    var testMessage = 'this is a test.';
+    var readyCount = 0;
+    var receiver = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
+
+    receiver.join(sessionName, function (message) {
+      assert.equal(message, testMessage);
+      receiver.close();
+      done();
+    }, function (){
+      var sender = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
+      sender.onStatusChanged(function(status){ if (status == 'connected') {
+        sender.send(sessionName, testMessage);
+        sender.close();
+      }});
+    });
+  });
+
+  it('Multiple client communication', function (done){
+    this.timeout(10000);
     var clients = [];
     for (var i = 0; i < 10; ++i){
       clients.push(
@@ -165,26 +81,103 @@ function BasicServerTest(callback){
       );
     }
     clientsCommunicationTest(clients, function(){
-      server.close();
-      console.log('BasicServerTest - Success');
-      callback();
+      for (var i = 0; i < 10; ++i){
+        clients[i].close();
+      }
+      done();
     });
   });
 
-  server.on('close', function(){
+  it('Server stop', function (done){
+    this.timeout(10000);
+    var client = require('qufox-client')('http://localhost:' + (portBase), clientOptions);
+    client.onStatusChanged(function(status){
+      if (status == 'connected') {
+        server.close();
+      }
+      if (status == 'disconnect') {
+        client.close();
+        done();
+      }
+    });
+  });
+
+  after(function (){
+    server.close();
+  });
+});
+
+if (config.RedisAdaptorTest && config.RedisAdaptorTest.numberOfInstance){
+  describe('Redis adapter test.', function () {
+    var indexs = [];
+    for (var i = 0; i < config.RedisAdaptorTest.numberOfInstance; ++i){
+      indexs.push(i);
+    }
+
+    var servers = null;
+    var clients = null;
+
+    it('Create ' + config.RedisAdaptorTest.numberOfInstance + ' servers', function (done){
+      async.mapSeries(indexs, function (index, callback){
+        var server = new QufoxServer({
+          listenTarget: portBase + index,
+          redisUrl: config.RedisAdaptorTest.redisUrl,
+          // redisSentinel: config.redisSentinel,
+          instanceName: 'test' + index,
+        });
+
+        server.on('listening', function (){
+          debug('Server ' + index + ' is listening.');
+          callback(null, server);
+        });
+      }, function (err, results){
+        if (err) {
+          debug(err);
+          return;
+        }
+        servers = results;
+        debug(indexs.length + ' servers are listening.');
+        done();
+      });
+    });
+
+    it('Create clients', function (done){
+      async.map(indexs, function (index, callback){
+        var client = require('qufox-client')('http://localhost:' + (portBase + index), clientOptions);
+        client.onStatusChanged(function(status){
+          if (status == 'connected') {
+            callback(null, client);
+          }
+        });
+      }, function (err, result){
+        if (err) {
+          throw err;
+        }
+        clients = result;
+        debug(clients.length + ' clients are connected.');
+        done();
+      });
+    });
+
+    it('Multiple communication', function (done){
+      this.timeout(10000);
+      clientsCommunicationTest(clients, function (){
+        done();
+      });
+    });
+
+    it('Close servers.', function (done){
+      clients.forEach(function (client){ client.close(); });
+      async.each(servers, function (server, callback){
+        server.once('close', function () {callback();});
+        server.close();
+      }, function(){
+        done();
+      });
+    });
   });
 }
 
-function MultipleServerTest(callback){
-  var clients = config.MultipleServerTest.urls.map(function (url){
-    return require('qufox-client')(url, clientOptions);
-  });
-
-  clientsCommunicationTest(clients, function(){
-    console.log('MultipleServerTest - Success');
-    callback();
-  });
-}
 
 function clientsCommunicationTest(clients, callback){
   var sessionName = 'testSession';
@@ -198,14 +191,14 @@ function clientsCommunicationTest(clients, callback){
     resultsArray[i][i] = true;
   }
 
-  checkResults(true);
-  var intervalJob = setInterval(function(){checkResults(true);}, 1000);
+  checkResults(false);
+  var intervalJob = setInterval(function(){checkResults(false);}, 1000);
 
   async.each(clients, function (client, next){
     client.join(sessionName, function(clientIndex){
       resultsArray[client.index][clientIndex] = true;
       if (checkResults()){
-        checkResults(true);
+        checkResults(false);
         clearInterval(intervalJob);
         debug('Communicate all success.');
         callback();
@@ -216,42 +209,23 @@ function clientsCommunicationTest(clients, callback){
     clients.forEach(function (client){
       setTimeout(function(){
         client.send(sessionName, client.index);
-      }, 500 * client.index);      
+      }, 500 * client.index);
     });
   });
 
   function checkResults(isPrint){
-    if (isPrint) debug('---- result array ----');
+    if (isPrint) console.log('---- result array ----');
     resultsArray.forEach(function(results){
       var printArray = results.map(function(result){ return result ? 1 : 0; });
-      if (isPrint) debug(printArray);
+      if (isPrint) console.log(printArray);
     });
 
     var allDone = resultsArray.every(function (results){
       return results.every(function (result){ return result; });
     });
 
-    if (isPrint) debug(allDone);
+    if (isPrint) console.log(allDone);
 
     return allDone;
   }
 }
-
-var tests = [
-  ServerStartAndStopTest,
-  BasicServerTest
-];
-
-if (config.RedisAdaptorTest) tests.push(RedisAdaptorTest);
-if (config.MultipleServerTest) tests.push(MultipleServerTest);
-
-async.waterfall(tests, function (err){
-  if (err) {
-    console.log('Test fail - ' + util.inspect(err, false, null, true));
-  }
-  else{
-    console.log('All test complete.');
-  }
-
-  process.exit(0);
-});

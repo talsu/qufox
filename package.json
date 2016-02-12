@@ -3,7 +3,7 @@
   "version": "0.2.5",
   "scripts": {
     "start": "node bin/qufox",
-    "test": "node test/test.js"
+    "test": "node_modules/.bin/mocha"
   },
   "dependencies": {
     "debug": "^2.2.0",
@@ -18,7 +18,9 @@
   "main": "qufox-server.js",
   "devDependencies": {
     "async": "^1.5.0",
-    "qufox-client": "^0.2.5"
+    "mocha": "^2.4.5",
+    "qufox-client": "^0.2.5",
+    "should": "^8.2.2"
   },
   "author": {
     "name": "talsu",
