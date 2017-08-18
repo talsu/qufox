@@ -1,6 +1,6 @@
 {
   "name": "qufox",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "scripts": {
     "start": "node bin/qufox",
     "test": "node_modules/.bin/mocha"
@@ -27,10 +27,7 @@
     "email": "talsu84@gmail.com",
     "url": "http://talsu.net/"
   },
-  "license": {
-    "type": "MIT",
-    "url": "https://raw2.github.com/talsu/qufox/master/LICENSE"
-  },
+  "license": "MIT",
   "description": "Qufox - Web messaging server",
   "repository": {
     "type": "git",

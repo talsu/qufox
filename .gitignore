@@ -32,3 +32,6 @@ Microsoft.NodejsTools.WebRole.dll
 *.njsproj
 *.sln
 .ntvs_analysis.dat
+
+.vscode
+jsconfig.json
