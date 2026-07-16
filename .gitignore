@@ -54,3 +54,6 @@ apps/api/dist
 *.tar.gz
 qufox-design.zip
 .tour/
+.claude/settings.local.json
+*.bak.premigrate
+*.bak.k3s-migration

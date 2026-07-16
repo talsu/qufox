@@ -1,0 +1,54 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: qufox
+---
+# NAS의 minio를 클러스터 내부 서비스처럼 보이게 하는 "셀렉터 없는 Service".
+# 파드를 고르는 selector가 없는 대신, 아래 EndpointSlice가 수동으로
+# "이 서비스의 실체는 192.168.0.71:9000"이라고 알려준다.
+# 이렇게 하면 Ingress가 클러스터 밖(NAS)의 minio로도 라우팅할 수 있다.
+apiVersion: v1
+kind: Service
+metadata:
+  name: nas-minio
+  namespace: qufox
+spec:
+  ports:
+    - name: minio
+      port: 9000
+      targetPort: 9000
+---
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: nas-minio-1
+  namespace: qufox
+  labels:
+    kubernetes.io/service-name: nas-minio   # 위 Service와 연결하는 라벨
+addressType: IPv4
+endpoints:
+  - addresses: ["192.168.0.71"]
+ports:
+  - name: minio
+    port: 9000
+    protocol: TCP
+---
+# traefik 미들웨어: NAS nginx의 rewrite 규칙과 동일한 prefix 제거.
+# nginx: rewrite ^/api/(.*)$ /$1  ==  traefik: stripPrefix /api
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-api
+  namespace: qufox
+spec:
+  stripPrefix:
+    prefixes: ["/api"]
+---
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: strip-attachments
+  namespace: qufox
+spec:
+  stripPrefix:
+    prefixes: ["/attachments"]

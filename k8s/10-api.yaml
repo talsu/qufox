@@ -1,0 +1,54 @@
+# qufox api — NAS의 compose 설정(docker-compose.prod.yml)을 k8s로 옮긴 것.
+# 환경변수는 qufox-env Secret(.env.prod 기반 + k3s용 URL 덮어쓰기)에서 주입.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: qufox-api
+  namespace: qufox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: qufox-api
+  template:
+    metadata:
+      labels:
+        app: qufox-api
+    spec:
+      containers:
+        - name: api
+          image: qufox/api:arm64
+          imagePullPolicy: Never        # 레지스트리 없이 containerd에 직접 import한 이미지
+          ports:
+            - containerPort: 3001
+          envFrom:
+            - secretRef:
+                name: qufox-env
+          # compose의 mem_limit: 1g / healthcheck와 동일한 개념
+          resources:
+            limits:
+              memory: 1Gi
+          livenessProbe:                # compose healthcheck: /healthz (의존성 미포함)
+            httpGet:
+              path: /healthz
+              port: 3001
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:               # 배포 게이트가 폴링하던 /readyz는 여기로
+            httpGet:
+              path: /readyz
+              port: 3001
+            initialDelaySeconds: 10
+            periodSeconds: 10
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: qufox-api
+  namespace: qufox
+spec:
+  selector:
+    app: qufox-api
+  ports:
+    - port: 3001
+      targetPort: 3001

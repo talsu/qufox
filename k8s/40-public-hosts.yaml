@@ -1,0 +1,91 @@
+# 컷오버용: NAS nginx가 qufox.com / sso.qufox.com 트래픽을 파이로 넘기면
+# traefik이 Host 헤더를 보고 여기 규칙으로 라우팅한다. (nip.io 규칙과 병행)
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qufox-com-api
+  namespace: qufox
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: qufox-strip-api@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: qufox.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: qufox-api
+                port:
+                  number: 3001
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qufox-com-attachments
+  namespace: qufox
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: qufox-strip-attachments@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: qufox.com
+      http:
+        paths:
+          - path: /attachments
+            pathType: Prefix
+            backend:
+              service:
+                name: nas-minio
+                port:
+                  number: 9000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qufox-com-root
+  namespace: qufox
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: qufox.com
+      http:
+        paths:
+          - path: /socket.io
+            pathType: Prefix
+            backend:
+              service:
+                name: qufox-api
+                port:
+                  number: 3001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qufox-web
+                port:
+                  number: 80
+---
+# sso.qufox.com: OIDC IdP — host 전체를 api로 (경로 변형 없음).
+# api의 vhost 미들웨어가 Host=sso.qufox.com일 때 oidc-provider로 라우팅하므로
+# Host 헤더 보존이 필수 (traefik은 기본적으로 보존한다).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qufox-sso
+  namespace: qufox
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: sso.qufox.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qufox-api
+                port:
+                  number: 3001

@@ -1,0 +1,74 @@
+# NAS nginx의 qufox.com server 블록과 동일한 라우팅.
+#   /api/*         → api (prefix 제거)          [nginx: rewrite + proxy_pass api]
+#   /socket.io/*   → api (prefix 유지, 웹소켓)   [nginx: proxy_pass api]
+#   /attachments/* → NAS minio (prefix 제거)     [nginx: rewrite + proxy_pass minio]
+#   /*             → web
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qufox
+  namespace: qufox
+  annotations:
+    # 미들웨어는 <네임스페이스>-<이름>@kubernetescrd 형식으로 라우터에 붙는다.
+    # 경로별로 다른 미들웨어가 필요해서 Ingress를 아래처럼 쪼갠다.
+    traefik.ingress.kubernetes.io/router.middlewares: qufox-strip-api@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: qufox.192.168.0.6.nip.io
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: qufox-api
+                port:
+                  number: 3001
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qufox-attachments
+  namespace: qufox
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: qufox-strip-attachments@kubernetescrd
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: qufox.192.168.0.6.nip.io
+      http:
+        paths:
+          - path: /attachments
+            pathType: Prefix
+            backend:
+              service:
+                name: nas-minio
+                port:
+                  number: 9000
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: qufox-root
+  namespace: qufox
+spec:
+  ingressClassName: traefik
+  rules:
+    - host: qufox.192.168.0.6.nip.io
+      http:
+        paths:
+          - path: /socket.io          # 웹소켓: prefix 제거 없이 api로
+            pathType: Prefix
+            backend:
+              service:
+                name: qufox-api
+                port:
+                  number: 3001
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: qufox-web
+                port:
+                  number: 80
