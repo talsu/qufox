@@ -40,14 +40,14 @@ services:
       S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:?set S3_SECRET_ACCESS_KEY via scripts/setup/init-minio.sh}
       DATABASE_URL: postgresql://qufox:${POSTGRES_PASSWORD}@qufox-postgres-prod:5432/qufox?schema=public
     volumes:
-      - ${BACKUP_DIR:-/volume3/qufox-data/backups/qufox}:/backups
+      - ${BACKUP_DIR:-/volume1/qufox-data/backups/qufox}:/backups
       # Postgres data dir — read-only, just for consistency spot-checks
       # (not used by db-backup.sh which goes through the network).
       - qufox-prod-pgdata:/pgdata:ro
       # task-012-F: MinIO data dir, read-only, so minio-backup.sh can
       # rsync --link-dest straight off the disk without going through
       # the network. Backups land under $BACKUP_DIR/minio/<YYYY-MM-DDTHH>/.
-      - ${MINIO_DATA_DIR:-/volume3/qufox-data/minio}:/minio-data:ro
+      - ${MINIO_DATA_DIR:-/volume1/qufox-data/minio}:/minio-data:ro
       # Docker socket so restore-test.sh can spin an ephemeral postgres
       # (+ minio-restore-test.sh an ephemeral minio).
       - /var/run/docker.sock:/var/run/docker.sock

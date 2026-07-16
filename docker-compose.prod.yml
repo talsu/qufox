@@ -12,7 +12,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set in .env.prod}
       POSTGRES_DB: qufox
     # task-036-D: enable WAL archiving for PITR. archive_command ships
-    # each closed WAL segment into /volume3/qufox-data/backups/pg-wal
+    # each closed WAL segment into /volume1/qufox-data/backups/pg-wal
     # via the bind mount below. wal_level=replica is the minimum needed
     # for archive_mode=on; the backup script (scripts/backup/pg-base-
     # backup.sh) pairs this with a weekly pg_basebackup.
@@ -30,7 +30,12 @@ services:
       - 'max_wal_senders=3'
     volumes:
       - qufox-prod-pgdata:/var/lib/postgresql/data
-      - /volume3/qufox-data/backups/pg-wal:/wal-archive
+      - /volume1/qufox-data/backups/pg-wal:/wal-archive
+    # k3s migration: expose to LAN so the Pi cluster (192.168.0.6) can reach
+    # the prod DB. Consider a DSM firewall rule limiting 5432 to the Pi.
+    # (host 5432 is taken by DSM's own postgres — use 15432 outside)
+    ports:
+      - '15432:5432'
     healthcheck:
       test: ['CMD-SHELL', 'pg_isready -U qufox -d qufox']
       interval: 5s
@@ -42,6 +47,10 @@ services:
     image: redis:7-alpine
     container_name: qufox-redis-prod
     restart: unless-stopped
+    # k3s migration: LAN exposure for the Pi cluster. Redis has no auth —
+    # strongly consider a DSM firewall rule limiting 6379 to 192.168.0.6.
+    ports:
+      - '6379:6379'
     healthcheck:
       test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
@@ -113,7 +122,7 @@ services:
 
   # task-012-F: single-tenant MinIO for attachments + any future user
   # uploads. Dev/prod use the same shape (no AWS). Data lives on the
-  # large /volume3 disk at /volume3/qufox-data/minio/; SHR/RAID at the
+  # large /volume3 disk at /volume1/qufox-data/minio/; SHR/RAID at the
   # volume level provides the redundancy. HA / distributed mode is a
   # future task once attachment availability becomes a hard SLA.
   qufox-minio:
@@ -131,8 +140,11 @@ services:
       # only needs the root host, which it derives from the incoming
       # request when nginx forwards it.
       MINIO_API_CORS_ALLOW_ORIGIN: https://qufox.com
+    # k3s migration: LAN exposure so the Pi cluster api can presign/upload.
+    ports:
+      - '9000:9000'
     volumes:
-      - /volume3/qufox-data/minio:/data
+      - /volume1/qufox-data/minio:/data
     healthcheck:
       test: ['CMD', 'curl', '-fsS', 'http://localhost:9000/minio/health/live']
       interval: 30s
