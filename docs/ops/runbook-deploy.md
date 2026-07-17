@@ -1,4 +1,9 @@
-# Runbook — Deploy
+# Runbook — Deploy (RETIRED 2026-07 — NAS 경로)
+
+> **⚠️ 이 runbook은 은퇴했다.** 2026-07 k3s 이관 이후 prod 배포는
+> `runbook-deploy-k3s.md`를 따른다. 이 문서는 NAS 구 경로(전면 롤백 시에만
+> 부활)의 기록으로 남긴다. 아래 "Normal path"의 webhook 흐름은 task-076에서
+> 이미 제거되어 이관 전에도 로컬 `deploy.sh` 실행이 실제 경로였다.
 
 How a production deploy happens end-to-end, what's automatic, and what
 to watch. Read this once before trusting the system to rebuild qufox.com

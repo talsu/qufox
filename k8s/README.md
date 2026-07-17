@@ -36,8 +36,16 @@ kubectl apply -f k8s/00-base.yaml
 kubectl apply -f k8s/10-api.yaml -f k8s/20-web.yaml -f k8s/30-ingress.yaml -f k8s/40-public-hosts.yaml
 ```
 
-이미지는 레지스트리를 쓰지 않고 파이에서 네이티브 빌드 후 containerd에
-직접 import한다(`imagePullPolicy: Never`) — `scripts/deploy/deploy-k3s.sh` 참조.
+이미지는 `ghcr.io/talsu/qufox/{api,web}` 비공개 패키지에서 pull한다
+(`ghcr-pull` imagePullSecret 필요 — read:packages 토큰으로 생성):
+
+```bash
+kubectl -n qufox create secret docker-registry ghcr-pull \
+  --docker-server=ghcr.io --docker-username=talsu --docker-password=<토큰>
+```
+
+빌드/배포 절차는 `scripts/deploy/deploy-k3s.sh`와
+`docs/ops/runbook-deploy-k3s.md` 참조.
 
 전제 조건: 파이 traefik에 NAS발 X-Forwarded-Proto 신뢰 설정
 (HelmChartConfig, 클러스터 관리 문서 참조)이 적용되어 있어야 한다.

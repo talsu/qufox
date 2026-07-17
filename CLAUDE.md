@@ -8,11 +8,13 @@
 
 ## 🛠 Tech Stack
 
-> **NAS-only deployment.** 모든 것이 단일 Synology NAS 위에서 돈다 — 클라우드
-> 계정·관리형 DB·관리형 오브젝트 스토리지 없음, docker-compose 외 오케스트레이터
-> 없음. dev / test / e2e / prod 전부 NAS 컨테이너에 대한 compose 파일.
-> 클라우드 서비스로 기울 만한 기능은 self-hosted 컨테이너로 대체한다.
-> (메모리 `project_prod_deploy`, `project_data_layout`.)
+> **Hybrid deployment (2026-07 k3s 이관).** prod 앱 계층(api/web)은 라즈베리파이
+> k3s 클러스터(`rpi-cluster-0`, 192.168.0.6, arm64)의 `qufox` 네임스페이스에서
+> 돌고, 데이터 계층(Postgres 15432/Redis 6379/MinIO 9000)과 TLS 관문(nginx)은
+> 여전히 Synology NAS(192.168.0.71)에 있다. dev/test/e2e는 기존대로 NAS compose.
+> 클라우드 계정·관리형 DB 없음 원칙은 유지 — 예외는 이미지 저장소로 쓰는
+> ghcr.io 비공개 패키지(`ghcr.io/talsu/qufox/{api,web}`) 하나다.
+> 상세: `k8s/README.md`, `docs/ops/runbook-deploy-k3s.md`.
 
 - Monorepo: pnpm workspaces + Turborepo (`apps/api`, `apps/web`, `packages/{shared-types,config,ui}`)
 - Backend: NestJS 10 (Node 22 LTS) + TypeScript strict
@@ -120,20 +122,29 @@ contract-validator, security-scanner, performance-profiler, feature-benchmarker)
 postgres-local(RW), redis-local(RW), playwright(RW), filesystem(repo root).
 원격/클라우드 MCP 없음 — prod postgres는 NAS 직접 접근만.
 
-### 🚀 CD: reviewer → develop → main → local deploy
+### 🚀 CD: reviewer → develop → main → k3s deploy
 
 feature → reviewer(적대적 재독, BLOCKER/HIGH fix-forward) → `merge --no-ff`
-develop → AI smoke → develop 머지 main → 로컬 `sudo bash scripts/deploy/deploy.sh`
-→ /readyz 게이트 + 실패 시 auto-rollback. GitHub webhook·1-click·K8s canary·별도
-staging 없음(webhook은 task-076에서 제거). `deploy.sh`가 단일 진입점(build-isolated
-→ local registry → pull rollout); flock 직렬화 + 경량 가드(last-fail → `--force`,
-btrfs CRIT → 거부). 롤백 SLO: 재생성 후 120s 내 /readyz non-200 → `:latest ← :prev`.
+develop → AI smoke → develop 머지 main → **파이에서**
+`scripts/deploy/deploy-k3s.sh <api|web>` → rollout 게이트(readiness `/readyz`)
++ 실패 시 자동 `rollout undo`. 스크립트 흐름: 네이티브 arm64 빌드 → ghcr.io
+push(`sha-<short>` + `latest` 태그) → `kubectl set image`. 이미지가 ghcr에
+있으므로 태그 교체만 하는 배포/롤백은 kubectl·Freelens 어디서든 가능하다.
+git 훅은 pnpm을 요구하므로 pnpm 없는 머신(파이)에서는
+`SKIP_SIMPLE_GIT_HOOKS=1`로 커밋/push 한다. 구 NAS 경로(`deploy.sh`,
+local registry, qufox-api/web 컨테이너)는 은퇴 — 컨테이너는 중지 상태로
+롤백용 잔존(`docs/ops/runbook-deploy-k3s.md`의 롤백 절 참조).
 
 ### 🌍 Infra & Security
 
-NAS `/volume2/dockers/qufox/` 아래: `docker-compose.prod.yml`(앱),
+**k3s(파이)**: 매니페스트는 repo `k8s/`(네임스페이스 qufox, NAS minio용 외부
+Service, traefik StripPrefix 미들웨어, 공개 호스트 Ingress). 환경변수는
+`qufox-env` Secret(NAS `.env.prod` 기반 + 클러스터용 URL 덮어쓰기 — 생성법
+`k8s/README.md`), ghcr pull은 `ghcr-pull` imagePullSecret. 트래픽:
+인터넷 → NAS nginx(TLS 종료, 10443) → 파이 traefik → 파드. **NAS**:
+`/volume2/dockers/qufox/`에 `docker-compose.prod.yml`(데이터 계층),
 `compose.deploy.yml`(백업 cron), `scripts/{setup,deploy,backup}/`. 시크릿은
-`.env.prod`·`.env.deploy`(git-ignored, 0600). 영속 데이터는 `/volume3/qufox-data/`,
+`.env.prod`·`.env.deploy`(git-ignored, 0600). 영속 데이터는 `/volume1/qufox-data/`,
 `/volume2`는 코드·이미지만(메모리 `project_data_layout`). Observability:
 Prometheus/Grafana + OTEL(stdout) + Pino. Loki는 future — TODO(task-019).
 Security: CodeQL/Dependabot/Gitleaks/Trivy/Syft/ZAP nightly → 취약점은
