@@ -21,8 +21,10 @@
 ## 시크릿 (커밋 금지)
 
 환경변수는 `qufox-env` Secret으로 주입한다. NAS의 `.env.prod`를 기반으로
-클러스터용 값(DATABASE_URL은 NAS IP:15432, REDIS_URL/S3_ENDPOINT는 NAS IP)을
-덮어써서 생성한다:
+클러스터용 값을 덮어써서 생성한다. 재생성 시 반드시 포함할 덮어쓰기:
+`DATABASE_URL`(NAS IP:15432) · `REDIS_URL`/`S3_ENDPOINT`(NAS IP) ·
+`NODE_ENV`/`API_PORT` · `OTEL_METRICS_EXPORTER=none`(수집기가 없어
+localhost:4318 접속 에러가 로그를 채우는 것 방지):
 
 ```bash
 kubectl -n qufox create secret generic qufox-env --from-env-file=<가공한 env 파일>
