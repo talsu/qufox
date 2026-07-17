@@ -22,6 +22,8 @@ spec:
           ports:
             - containerPort: 80
           resources:
+            requests:
+              memory: 64Mi              # 실사용 ~5Mi (정적 nginx)
             limits:
               memory: 256Mi             # compose mem_limit: 256m
           readinessProbe:

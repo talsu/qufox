@@ -25,8 +25,10 @@ spec:
           envFrom:
             - secretRef:
                 name: qufox-env
-          # compose의 mem_limit: 1g / healthcheck와 동일한 개념
+          # request는 실사용(~150Mi) 기반, limit은 여유(compose mem_limit 1g 상당)
           resources:
+            requests:
+              memory: 256Mi
             limits:
               memory: 1Gi
           livenessProbe:                # compose healthcheck: /healthz (의존성 미포함)
