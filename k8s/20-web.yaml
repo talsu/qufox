@@ -14,10 +14,11 @@ spec:
       labels:
         app: qufox-web
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull
       containers:
         - name: web
-          image: qufox/web:arm64
-          imagePullPolicy: Never
+          image: ghcr.io/talsu/qufox/web:latest   # 배포 시 deploy-k3s.sh가 sha 태그로 교체
           ports:
             - containerPort: 80
           resources:

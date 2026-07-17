@@ -15,10 +15,11 @@ spec:
       labels:
         app: qufox-api
     spec:
+      imagePullSecrets:
+        - name: ghcr-pull             # ghcr.io 비공개 패키지 pull용 (docker-registry Secret)
       containers:
         - name: api
-          image: qufox/api:arm64
-          imagePullPolicy: Never        # 레지스트리 없이 containerd에 직접 import한 이미지
+          image: ghcr.io/talsu/qufox/api:latest   # 배포 시 deploy-k3s.sh가 sha 태그로 교체
           ports:
             - containerPort: 3001
           envFrom:
