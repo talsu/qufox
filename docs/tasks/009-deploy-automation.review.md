@@ -31,7 +31,7 @@ every push.
 origin "$BRANCH"` inside the `qufox-webhook` container, which mounts
 the host repo at `/repo` but nothing else.
 
-The host's `origin` is `git@github.com:talsu/bongtalk.git` (SSH). The
+The host's `origin` is `git@github.com:talsu/qufox.git` (SSH). The
 webhook Dockerfile at `services/webhook/Dockerfile:18-19` installs
 `docker-cli bash git curl tini` — no ssh-agent, no credential helper,
 and `compose.deploy.yml:33-40` only bind-mounts the repo and
