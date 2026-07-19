@@ -18,7 +18,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: web
-          image: ghcr.io/talsu/qufox/web:latest   # 배포 시 deploy-k3s.sh가 sha 태그로 교체
+          image: ghcr.io/talsu/qufox/web:sha-a6a4aaf   # 배포 시 deploy-k3s.sh가 sha 태그로 교체
           ports:
             - containerPort: 80
           resources:
