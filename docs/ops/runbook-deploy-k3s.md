@@ -6,42 +6,45 @@ NAS에 남아 있다. 구 NAS 배포 경로는 `runbook-deploy.md`(역사 기록
 
 ## 지형
 
-| 무엇 | 어디 | 비고 |
-|---|---|---|
-| api/web 파드 | 파이 `rpi-cluster-0`(192.168.0.6), ns `qufox` | manifests: repo `k8s/` |
-| 이미지 | `ghcr.io/talsu/qufox/{api,web}` (비공개) | `sha-<short>` + `latest` 태그 |
-| Postgres/Redis/MinIO | NAS 192.168.0.71 :15432/:6379/:9000 | 기존 prod 인스턴스 그대로 |
-| TLS/관문 | NAS nginx (호스트 10080/10443) | qufox.com·sso.qufox.com → 파이 traefik 프록시 |
-| 시크릿 | ns qufox: `qufox-env`(앱 env), `ghcr-pull`(이미지 pull) | 생성법 `k8s/README.md` |
+| 무엇                 | 어디                                                    | 비고                                          |
+| -------------------- | ------------------------------------------------------- | --------------------------------------------- |
+| api/web 파드         | 파이 `rpi-cluster-0`(192.168.0.6), ns `qufox`           | manifests: repo `k8s/`                        |
+| 이미지               | `ghcr.io/talsu/qufox/{api,web}` (비공개)                | `sha-<short>` + `latest` 태그                 |
+| Postgres/Redis/MinIO | NAS 192.168.0.71 :15432/:6379/:9000                     | 기존 prod 인스턴스 그대로                     |
+| TLS/관문             | NAS nginx (호스트 10080/10443)                          | qufox.com·sso.qufox.com → 파이 traefik 프록시 |
+| 시크릿               | ns qufox: `qufox-env`(앱 env), `ghcr-pull`(이미지 pull) | 생성법 `k8s/README.md`                        |
 
-## 정상 배포 경로
+## 정상 배포 경로 (GitOps — push만 하면 끝)
 
-파이에서 (어느 체크아웃에서든):
+main에 코드 push → 자동:
 
-```bash
-git pull
-scripts/deploy/deploy-k3s.sh api    # 또는 web
+```
+GitHub Actions(.github/workflows/deploy.yml)
+  ├─ build(matrix): api·web × amd64@ubuntu-24.04 / arm64@ubuntu-24.04-arm  (네이티브, QEMU 없음)
+  │    → ghcr.io/talsu/qufox/{api,web} 를 digest로 push
+  ├─ merge-deploy: 서비스별 manifest list(:sha-<short>, :latest) 생성
+  └─ merge-deploy: k8s/10-api.yaml·20-web.yaml 태그를 sha-<short>로 커밋([skip ci])
+Flux(fleet repo talsu/lab-flux) → 이 repo k8s/ 를 sync → 롤아웃(readiness `/readyz` 게이트)
 ```
 
-스크립트가 하는 일: ① 네이티브 arm64 `docker build` ② ghcr push
-(`sha-$(git rev-parse --short HEAD)` + `latest`) ③ `kubectl set image`
-④ `rollout status` 게이트(180s) — readiness probe(`/readyz`)가 green이 될
-때까지 구 파드가 트래픽을 계속 받는다 ⑤ 게이트 실패 시 자동 `rollout undo`.
+- **CI는 클러스터에 접근하지 않는다.** 실제 배포는 Flux가 git을 pull 해서 수행.
+- `k8s/**`·문서만 바뀐 push는 재빌드 안 함(`paths-ignore` + `[skip ci]`, 루프 방지).
+- 수동 재실행: `gh workflow run deploy.yml --repo talsu/qufox --ref main`.
+- 전제: repo secret `GHCR_TOKEN`(write:packages PAT) — ghcr push용. k8s 태그 커밋은
+  기본 `GITHUB_TOKEN`(contents:write)이 한다.
 
-전제: 빌드 머신에서 `sudo docker login ghcr.io -u talsu`(write:packages 토큰,
-파이는 `~/.ghcr-token`에 보관) 1회.
+### 롤백 (git revert)
 
-### 태그만 교체하는 배포/롤백 (빌드 없이)
-
-이미지가 이미 ghcr에 있으므로 어디서든:
+kubectl이 아니라 git으로 되돌린다 (Flux가 다음 reconcile에서 git 상태로 되돌리므로
+`kubectl set image`/`rollout undo`는 GitOps와 충돌한다):
 
 ```bash
-kubectl -n qufox set image deploy/qufox-api api=ghcr.io/talsu/qufox/api:sha-XXXXXXXX
-kubectl -n qufox rollout undo deploy/qufox-api        # 직전 릴리스로
+git revert <chore(k8s): deploy … 커밋> && git push   # → Flux가 이전 sha로 롤아웃
+# 또는 k8s/10-api.yaml·20-web.yaml 의 태그를 원하는 sha-<short>로 직접 바꿔 커밋/push
 ```
 
-Freelens에서도 동일: Deployment 편집으로 이미지 태그 변경. 쌓인 태그 목록은
-github.com/talsu?tab=packages 에서 확인.
+쌓인 태그 목록은 github.com/talsu?tab=packages 에서 확인. 클러스터 상태 확인:
+`flux get kustomization qufox` / `kubectl -n qufox get deploy`.
 
 ## 배포 중 관찰
 

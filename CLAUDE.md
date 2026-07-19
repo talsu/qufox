@@ -122,18 +122,18 @@ contract-validator, security-scanner, performance-profiler, feature-benchmarker)
 postgres-local(RW), redis-local(RW), playwright(RW), filesystem(repo root).
 원격/클라우드 MCP 없음 — prod postgres는 NAS 직접 접근만.
 
-### 🚀 CD: reviewer → develop → main → k3s deploy
+### 🚀 CD: reviewer → develop → main → GitOps (Flux)
 
 feature → reviewer(적대적 재독, BLOCKER/HIGH fix-forward) → `merge --no-ff`
-develop → AI smoke → develop 머지 main → **파이에서**
-`scripts/deploy/deploy-k3s.sh <api|web>` → rollout 게이트(readiness `/readyz`)
-+ 실패 시 자동 `rollout undo`. 스크립트 흐름: 네이티브 arm64 빌드 → ghcr.io
-push(`sha-<short>` + `latest` 태그) → `kubectl set image`. 이미지가 ghcr에
-있으므로 태그 교체만 하는 배포/롤백은 kubectl·Freelens 어디서든 가능하다.
-git 훅은 pnpm을 요구하므로 pnpm 없는 머신(파이)에서는
-`SKIP_SIMPLE_GIT_HOOKS=1`로 커밋/push 한다. 구 NAS 경로(`deploy.sh`,
-local registry, qufox-api/web 컨테이너)는 은퇴 — 컨테이너는 중지 상태로
-롤백용 잔존(`docs/ops/runbook-deploy-k3s.md`의 롤백 절 참조).
+develop → AI smoke → develop 머지 main → **GitHub Actions**
+(`.github/workflows/deploy.yml`)가 api·web 멀티아키(amd64+arm64 네이티브) 이미지를
+빌드해 ghcr.io push(`sha-<short>` + `latest`) → `k8s/` 이미지 태그를 이 repo에 커밋
+→ **Flux**(fleet repo `talsu/lab-flux`)가 `k8s/` 를 sync 해 롤아웃. **CI는 클러스터에
+접근하지 않는다.** `k8s/**` 변경·`[skip ci]`는 재빌드 트리거 안 함(루프 방지).
+**롤백 = git revert**(kubectl 아님). git 훅은 pnpm을 요구하므로 로컬 커밋 시
+`SKIP_SIMPLE_GIT_HOOKS=1`(또는 `git ... --no-verify`). 구 NAS 경로(`deploy.sh`,
+`build-and-push.sh`, `rollback.sh`, local registry, docker-compose)는 **개발용으로
+잔존**. 상세: `k8s/README.md`, `docs/ops/runbook-deploy-k3s.md`.
 
 ### 🌍 Infra & Security
 

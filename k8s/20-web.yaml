@@ -18,14 +18,14 @@ spec:
         - name: ghcr-pull
       containers:
         - name: web
-          image: ghcr.io/talsu/qufox/web:sha-a6a4aaf   # 배포 시 deploy-k3s.sh가 sha 태그로 교체
+          image: ghcr.io/talsu/qufox/web:sha-a6a4aaf # CI(.github/workflows/deploy.yml)가 sha 태그로 교체 커밋 → Flux 롤아웃
           ports:
             - containerPort: 80
           resources:
             requests:
-              memory: 64Mi              # 실사용 ~5Mi (정적 nginx)
+              memory: 64Mi # 실사용 ~5Mi (정적 nginx)
             limits:
-              memory: 256Mi             # compose mem_limit: 256m
+              memory: 256Mi # compose mem_limit: 256m
           readinessProbe:
             httpGet:
               path: /

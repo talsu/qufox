@@ -6,13 +6,13 @@
 
 ## 구성
 
-| 파일 | 내용 |
-|---|---|
-| `00-base.yaml` | 네임스페이스, NAS minio용 외부 Service/EndpointSlice, traefik StripPrefix 미들웨어 |
-| `10-api.yaml` | api Deployment + Service (probe는 /healthz, /readyz) |
-| `20-web.yaml` | web Deployment + Service |
-| `30-ingress.yaml` | 내부 테스트 호스트(qufox.192.168.0.6.nip.io) 라우팅 |
-| `40-public-hosts.yaml` | 공개 도메인(qufox.com, sso.qufox.com) 라우팅 — NAS nginx가 TLS 종료 후 프록시 |
+| 파일                   | 내용                                                                               |
+| ---------------------- | ---------------------------------------------------------------------------------- |
+| `00-base.yaml`         | 네임스페이스, NAS minio용 외부 Service/EndpointSlice, traefik StripPrefix 미들웨어 |
+| `10-api.yaml`          | api Deployment + Service (probe는 /healthz, /readyz)                               |
+| `20-web.yaml`          | web Deployment + Service                                                           |
+| `30-ingress.yaml`      | 내부 테스트 호스트(qufox.192.168.0.6.nip.io) 라우팅                                |
+| `40-public-hosts.yaml` | 공개 도메인(qufox.com, sso.qufox.com) 라우팅 — NAS nginx가 TLS 종료 후 프록시      |
 
 트래픽 경로: 인터넷 → NAS nginx(TLS) → 파이 traefik → api/web 파드.
 경로 규칙(/api, /socket.io, /attachments)은 NAS nginx의 기존 qufox.com
@@ -46,8 +46,9 @@ kubectl -n qufox create secret docker-registry ghcr-pull \
   --docker-server=ghcr.io --docker-username=talsu --docker-password=<토큰>
 ```
 
-빌드/배포 절차는 `scripts/deploy/deploy-k3s.sh`와
-`docs/ops/runbook-deploy-k3s.md` 참조.
+빌드/배포는 GitOps(GitHub Actions + Flux)다: main에 push → `.github/workflows/deploy.yml`
+이 api·web 멀티아키 이미지를 빌드/푸시하고 여기 `k8s/` 태그를 커밋 → Flux가 롤아웃.
+상세·롤백 절차는 `docs/ops/runbook-deploy-k3s.md` 참조.
 
 전제 조건: 파이 traefik에 NAS발 X-Forwarded-Proto 신뢰 설정
 (HelmChartConfig, 클러스터 관리 문서 참조)이 적용되어 있어야 한다.
