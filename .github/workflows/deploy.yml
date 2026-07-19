@@ -1,0 +1,114 @@
+# git 주도 멀티아키 배포: api·web 각 아키를 네이티브 러너에서 빌드(에뮬레이션 없음)
+# → digest로 push → 서비스별 manifest list 머지 → k8s/ 태그 커밋 → Flux 롤아웃.
+# 클러스터엔 접근하지 않는다. deploy-k3s.sh(Pi 빌드 + kubectl set image)를 대체.
+#   build(matrix 4): {api,web} × {amd64@ubuntu-24.04, arm64@ubuntu-24.04-arm} → push by digest
+#   merge-deploy: 서비스별 imagetools create (sha-<sha>+latest) → k8s/10-api,20-web 태그 커밋
+#   → Flux(talsu/lab-flux)가 k8s/ 를 sync → rollout. 노드는 자기 아키를 자동 pull.
+name: deploy
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'k8s/**'
+      - '**.md'
+      - 'docs/**'
+  workflow_dispatch: {}
+
+concurrency:
+  group: deploy-main
+  cancel-in-progress: false
+
+env:
+  IMAGE_PREFIX: ghcr.io/talsu/qufox # → /api, /web
+
+jobs:
+  build:
+    strategy:
+      fail-fast: true
+      matrix:
+        service: [api, web]
+        target:
+          - { platform: linux/amd64, runner: ubuntu-24.04, arch: amd64 }
+          - { platform: linux/arm64, runner: ubuntu-24.04-arm, arch: arm64 }
+    runs-on: ${{ matrix.target.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: talsu
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - id: build
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/${{ matrix.service }}/Dockerfile
+          platforms: ${{ matrix.target.platform }}
+          outputs: type=image,name=${{ env.IMAGE_PREFIX }}/${{ matrix.service }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.service }}-${{ matrix.target.arch }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}-${{ matrix.target.arch }}
+
+      - name: Export digest
+        run: |
+          mkdir -p /tmp/digests
+          touch "/tmp/digests/${DIGEST#sha256:}"
+        env:
+          DIGEST: ${{ steps.build.outputs.digest }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: digest-${{ matrix.service }}-${{ matrix.target.arch }}
+          path: /tmp/digests/*
+          retention-days: 1
+          if-no-files-found: error
+
+  merge-deploy:
+    needs: [build]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write # k8s/ 태그 갱신 커밋을 main에 push
+    steps:
+      - uses: actions/checkout@v4
+      - id: sha
+        run: echo "short=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/digests
+          pattern: digest-*
+
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: talsu
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Create per-service manifest lists (multi-arch)
+        run: |
+          NEW="sha-${{ steps.sha.outputs.short }}"
+          for svc in api web; do
+            IMG="${IMAGE_PREFIX}/${svc}"
+            # download-artifact keeps each artifact in its own dir: digest-<svc>-<arch>/<digest>
+            refs=$(for f in /tmp/digests/digest-${svc}-*/*; do echo "${IMG}@sha256:$(basename "$f")"; done)
+            echo "== ${IMG}:${NEW} from: ${refs}"
+            docker buildx imagetools create -t "${IMG}:${NEW}" -t "${IMG}:latest" ${refs}
+            docker buildx imagetools inspect "${IMG}:${NEW}"
+          done
+
+      - name: Bump k8s image tags & commit (git-driven deploy)
+        run: |
+          NEW="sha-${{ steps.sha.outputs.short }}"
+          sed -i -E "s#(ghcr\.io/talsu/qufox/(api|web):)[^\"[:space:]]+#\1${NEW}#g" k8s/10-api.yaml k8s/20-web.yaml
+          if git diff --quiet -- k8s/; then
+            echo "k8s/ already at ${NEW}; nothing to commit."
+            exit 0
+          fi
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8s/10-api.yaml k8s/20-web.yaml
+          git commit -m "chore(k8s): deploy ${NEW} [skip ci]"
+          git push
