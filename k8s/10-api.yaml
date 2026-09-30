@@ -19,7 +19,7 @@ spec:
         - name: ghcr-pull # ghcr.io 비공개 패키지 pull용 (docker-registry Secret)
       containers:
         - name: api
-          image: ghcr.io/talsu/qufox/api:sha-a6a4aaf # CI(.github/workflows/deploy.yml)가 sha 태그로 교체 커밋 → Flux 롤아웃
+          image: ghcr.io/talsu/qufox/api:sha-2d7dc21 # CI(.github/workflows/deploy.yml)가 sha 태그로 교체 커밋 → Flux 롤아웃
           ports:
             - containerPort: 3001
           envFrom:
