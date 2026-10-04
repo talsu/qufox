@@ -18,7 +18,7 @@ spec:
         - name: ghcr-pull
       containers:
         - name: web
-          image: ghcr.io/talsu/qufox/web:sha-2d7dc21 # CI(.github/workflows/deploy.yml)가 sha 태그로 교체 커밋 → Flux 롤아웃
+          image: ghcr.io/talsu/qufox/web:sha-73fbde5 # CI(.github/workflows/deploy.yml)가 sha 태그로 교체 커밋 → Flux 롤아웃
           ports:
             - containerPort: 80
           resources:
