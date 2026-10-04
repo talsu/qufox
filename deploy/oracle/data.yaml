@@ -1,0 +1,174 @@
+# The data layer the NAS provides at home, as pods on the server.
+# Redis keeps sessions and fans out Socket.IO; losing it on a restart
+# costs sign-ins, nothing more, so it has no disk. MinIO holds the
+# attachments; its folder is filled from the NAS by the sync
+# (homelab-kb tools/oracle-sync.sh) and lives on the server's disk. Its
+# root keys are the hand-made secret `minio-root`, the same as at home,
+# so the service account in `.minio.sys` carried over by the sync works.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis
+  namespace: qufox
+  labels:
+    app: redis
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: redis
+  template:
+    metadata:
+      labels:
+        app: redis
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ['--save', '', '--appendonly', 'no']
+          ports:
+            - containerPort: 6379
+          readinessProbe:
+            exec:
+              command: ['redis-cli', 'ping']
+            periodSeconds: 10
+          resources:
+            requests: { memory: 32Mi, cpu: 10m }
+            limits: { memory: 256Mi }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis
+  namespace: qufox
+spec:
+  selector:
+    app: redis
+  ports:
+    - port: 6379
+      targetPort: 6379
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: minio-data
+  namespace: qufox
+spec:
+  accessModes: [ReadWriteOnce]
+  storageClassName: local-path
+  resources:
+    requests:
+      storage: 10Gi
+---
+# The object store. MinIO's public images were withdrawn (2026-10, pull
+# access denied on Docker Hub and quay.io), so this is RustFS, a MinIO
+# compatible server with an arm64 image, speaking the same S3 API on 9000
+# (path style, presigned urls). Its root keys are set to the app's own S3
+# keys (secret `objstore`), so the app signs in as it does at home and no
+# user has to be made. The Service keeps the name `nas-minio` the base
+# ingress and the app point at.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio
+  namespace: qufox
+  labels:
+    app: minio
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: minio
+  template:
+    metadata:
+      labels:
+        app: minio
+    spec:
+      containers:
+        - name: rustfs
+          image: rustfs/rustfs:latest
+          env:
+            - name: RUSTFS_VOLUMES
+              value: /data
+            - name: RUSTFS_ADDRESS
+              value: ':9000'
+            - name: RUSTFS_CONSOLE_ENABLE
+              value: 'false'
+            - name: RUSTFS_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: { name: objstore, key: access_key }
+            - name: RUSTFS_SECRET_KEY
+              valueFrom:
+                secretKeyRef: { name: objstore, key: secret_key }
+          ports:
+            - containerPort: 9000
+          readinessProbe:
+            tcpSocket:
+              port: 9000
+            periodSeconds: 10
+          resources:
+            requests: { memory: 128Mi, cpu: 20m }
+            limits: { memory: 768Mi }
+          volumeMounts:
+            - { name: data, mountPath: /data }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: minio-data
+---
+# rclone kept running, for the sync to copy the attachments bucket from
+# the NAS's MinIO (over the WireGuard link) into the store above:
+# `rclone sync home:qufox-attachments here:qufox-attachments`. The NAS
+# folder is not readable from outside its container, so the bucket is
+# copied object by object through the S3 API. Keys: secret `objstore`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: minio-mirror
+  namespace: qufox
+  labels:
+    app: minio-mirror
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: minio-mirror
+  template:
+    metadata:
+      labels:
+        app: minio-mirror
+    spec:
+      containers:
+        - name: rclone
+          image: rclone/rclone:latest
+          command: ['sleep', 'infinity']
+          env:
+            - name: RCLONE_CONFIG_HOME_TYPE
+              value: s3
+            - name: RCLONE_CONFIG_HOME_PROVIDER
+              value: Minio
+            - name: RCLONE_CONFIG_HOME_ENDPOINT
+              value: http://192.168.0.71:9000
+            - name: RCLONE_CONFIG_HOME_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef: { name: objstore, key: access_key }
+            - name: RCLONE_CONFIG_HOME_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: { name: objstore, key: secret_key }
+            - name: RCLONE_CONFIG_HERE_TYPE
+              value: s3
+            - name: RCLONE_CONFIG_HERE_PROVIDER
+              value: Minio
+            - name: RCLONE_CONFIG_HERE_ENDPOINT
+              value: http://nas-minio.qufox.svc.cluster.local:9000
+            - name: RCLONE_CONFIG_HERE_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef: { name: objstore, key: access_key }
+            - name: RCLONE_CONFIG_HERE_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef: { name: objstore, key: secret_key }
+          resources:
+            requests: { memory: 32Mi, cpu: 10m }
+            limits: { memory: 256Mi }

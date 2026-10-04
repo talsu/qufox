@@ -1,0 +1,18 @@
+# qufox on the Oracle Cloud server's k3s, for the weeks the homelab is
+# being moved (homelab-kb wiki/relocation-2026-10.md). The base is k8s/;
+# what differs is the data layer the NAS provides at home: Postgres is the
+# issue-hub overlay's pod (database `qufox` in it), Redis and MinIO become
+# pods here, and the `nas-minio` Service points at the MinIO pod instead
+# of the NAS. The app secret `qufox-env` is hand-made with those endpoints.
+#
+#   kubectl --context oracle apply -k deploy/oracle
+#
+# The image tags come from the base, so a deploy here is the same commit
+# as at home.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../k8s
+  - data.yaml
+patches:
+  - path: nas-minio.yaml

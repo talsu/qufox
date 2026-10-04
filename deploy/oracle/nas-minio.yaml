@@ -1,0 +1,17 @@
+# At home `nas-minio` is a headless Service with an EndpointSlice to the
+# NAS. Here it selects the MinIO pod (data.yaml), and the slice goes.
+apiVersion: discovery.k8s.io/v1
+kind: EndpointSlice
+metadata:
+  name: nas-minio-1
+  namespace: qufox
+$patch: delete
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nas-minio
+  namespace: qufox
+spec:
+  selector:
+    app: minio

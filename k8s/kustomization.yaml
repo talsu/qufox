@@ -1,0 +1,11 @@
+# The manifests in this folder, listed so that an overlay (deploy/oracle)
+# can build on them. Flux applied the folder as a whole before and does
+# the same with this list; nothing changes at home.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - 00-base.yaml
+  - 10-api.yaml
+  - 20-web.yaml
+  - 30-ingress.yaml
+  - 40-public-hosts.yaml

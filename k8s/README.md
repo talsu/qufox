@@ -52,3 +52,13 @@ kubectl -n qufox create secret docker-registry ghcr-pull \
 
 전제 조건: 파이 traefik에 NAS발 X-Forwarded-Proto 신뢰 설정
 (HelmChartConfig, 클러스터 관리 문서 참조)이 적용되어 있어야 한다.
+
+## Oracle Cloud 임시 운영 (2026-10 이사 기간)
+
+홈랩이 이사하는 동안 `deploy/oracle/`의 overlay로 Oracle Cloud 서버의 k3s에서 돌립니다
+(`kubectl --context oracle apply -k deploy/oracle`). 베이스는 이 폴더이고(그래서 `kustomization.yaml`로
+파일 목록을 둠. Flux 동작은 같음), 차이는 데이터 계층뿐입니다: Postgres는 issue-hub overlay의 파드(DB `qufox`),
+Redis와 객체 저장소는 파드로, `nas-minio` Service는 그 파드를 가리킵니다. MinIO 공개 이미지가 2026-10에
+사라져 객체 저장소는 MinIO 호환 RustFS입니다(루트 키 = 앱의 S3 키, 시크릿 `objstore`). 첨부 버킷은
+rclone 파드가 NAS MinIO에서 S3 API로 복사합니다. 시크릿(`qufox-env`, `objstore`, `ghcr-pull`)은 손으로
+만들며 값은 어디에도 적지 않습니다. 전체 계획은 homelab-kb `wiki/relocation-2026-10.md`.
