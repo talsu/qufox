@@ -25,12 +25,7 @@ function makeService(opts: {
       findUnique: vi.fn(async () => (opts.accessRow ? { id: 'a1' } : null)),
     },
   };
-  const service = new OidcProviderService(
-    {} as never,
-    prisma as never,
-    {} as never,
-    {} as never,
-  );
+  const service = new OidcProviderService({} as never, prisma as never, {} as never, {} as never);
   return { service, prisma };
 }
 
