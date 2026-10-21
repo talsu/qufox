@@ -3,19 +3,22 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { OidcProviderService } from './oidc-provider.service';
 
-type UserRow = { email: string; isDeactivated: boolean } | null;
+type UserRow = { email: string; emailVerified: boolean; isDeactivated: boolean } | null;
 
 function makeService(opts: {
   user: UserRow;
   metadata?: unknown;
   hasClient?: boolean;
+  enabled?: boolean;
   accessRow?: boolean;
 }) {
   const prisma = {
     user: { findUnique: vi.fn(async () => opts.user) },
     oAuthClient: {
       findUnique: vi.fn(async () =>
-        opts.hasClient === false ? null : { metadata: opts.metadata ?? {} },
+        opts.hasClient === false
+          ? null
+          : { metadata: opts.metadata ?? {}, enabled: opts.enabled ?? true },
       ),
     },
     oAuthClientAccess: {
@@ -31,7 +34,7 @@ function makeService(opts: {
   return { service, prisma };
 }
 
-const member = { email: 'someone@qufox.com', isDeactivated: false };
+const member = { email: 'someone@qufox.com', emailVerified: true, isDeactivated: false };
 
 describe('OidcProviderService.isApproved', () => {
   const prevAdmins = process.env.SSO_ADMIN_EMAILS;
@@ -39,12 +42,16 @@ describe('OidcProviderService.isApproved', () => {
     process.env.SSO_ADMIN_EMAILS = 'admin@qufox.com';
   });
   afterEach(() => {
-    process.env.SSO_ADMIN_EMAILS = prevAdmins;
+    if (prevAdmins === undefined) {
+      delete process.env.SSO_ADMIN_EMAILS;
+    } else {
+      process.env.SSO_ADMIN_EMAILS = prevAdmins;
+    }
   });
 
   it('SSO 관리자는 허용목록 행 없이 허용', async () => {
     const { service, prisma } = makeService({
-      user: { email: 'Admin@qufox.com', isDeactivated: false },
+      user: { email: 'Admin@qufox.com', emailVerified: false, isDeactivated: false },
     });
     await expect(service.isApproved('skulk', 'u1')).resolves.toBe(true);
     expect(prisma.oAuthClientAccess.findUnique).not.toHaveBeenCalled();
@@ -60,6 +67,32 @@ describe('OidcProviderService.isApproved', () => {
     const { service } = makeService({
       user: { ...member, isDeactivated: true },
       metadata: { openAccess: true },
+    });
+    await expect(service.isApproved('qufox-den', 'u1')).resolves.toBe(false);
+  });
+
+  it('openAccess client 라도 이메일 미인증 계정은 허용목록으로 판정', async () => {
+    const { service } = makeService({
+      user: { ...member, emailVerified: false },
+      metadata: { openAccess: true },
+    });
+    await expect(service.isApproved('qufox-den', 'u1')).resolves.toBe(false);
+  });
+
+  it('openAccess client 라도 미인증 계정에 허용목록 행이 있으면 허용', async () => {
+    const { service } = makeService({
+      user: { ...member, emailVerified: false },
+      metadata: { openAccess: true },
+      accessRow: true,
+    });
+    await expect(service.isApproved('qufox-den', 'u1')).resolves.toBe(true);
+  });
+
+  it('disabled client 의 openAccess 는 무시', async () => {
+    const { service } = makeService({
+      user: member,
+      metadata: { openAccess: true },
+      enabled: false,
     });
     await expect(service.isApproved('qufox-den', 'u1')).resolves.toBe(false);
   });

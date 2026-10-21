@@ -43,6 +43,15 @@ p.oAuthClient.upsert({ where: { clientId: 'newsite' }, create: { clientId: 'news
 ```
 → `sudo docker restart qufox-api` (로그에 `clients=N` 증가 확인).
 
+**접근 허용(인가).** 기본은 허용목록 — SSO 관리자(`SSO_ADMIN_EMAILS`) 외에는 `OAuthClientAccess`
+행(qufox 관리 UI)이 있어야 로그인된다. `metadata.openAccess: true` 를 넣은 client 는 허용목록 없이
+**이메일 인증된 활성 qufox 계정 모두**를 허용한다(현재 `qufox-den` 만 — 마이그레이션
+`20260639000000_sso_den_open_access`, 2026-10-21). 미인증 계정은 그래도 허용목록 행으로만 들어온다.
+openAccess 는 호출마다 읽으므로 이 값만 바꿀 때는 재시작이 필요 없다.
+★ 위 upsert 의 `update: data` 는 `metadata` 를 통째로 덮어쓴다 — 기존 client(특히 `qufox-den`)를
+고칠 때는 현재 metadata 를 읽어 합친 뒤 쓰거나 `openAccess` 를 data 에 함께 넣는다. 반대로 Den 행을
+복사해 새 client 를 만들 때는 `openAccess` 를 빼야 한다.
+
 ## 3. RP 코드 드롭인 (스택별 복사)
 검증된 무-ESM RP 패턴(jose/openid-client 불요):
 - **NestJS/TS**: `skulk/apps/api/src/auth/sso.ts` + `auth.ts`(GET /auth/login·/auth/callback·/auth/logout) 복사. jsonwebtoken 추가. token/jwks 는 docker `internal` 망이면 `http://qufox-api:3001` + `Host: sso.qufox.com` 헤더(node:http).
