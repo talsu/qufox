@@ -45,12 +45,15 @@ p.oAuthClient.upsert({ where: { clientId: 'newsite' }, create: { clientId: 'news
 
 **접근 허용(인가).** 기본은 허용목록 — SSO 관리자(`SSO_ADMIN_EMAILS`) 외에는 `OAuthClientAccess`
 행(qufox 관리 UI)이 있어야 로그인된다. `metadata.openAccess: true` 를 넣은 client 는 허용목록 없이
-**이메일 인증된 활성 qufox 계정 모두**를 허용한다(현재 `qufox-den` 만 — 마이그레이션
-`20260639000000_sso_den_open_access`, 2026-10-21). 미인증 계정은 그래도 허용목록 행으로만 들어온다.
+**이메일 인증된 활성 qufox 계정 모두**를 허용한다(지금 켜진 client 는 없음 — 처음 쓴 `qufox-den` 은
+2026-10-22 은퇴, 아래). 미인증 계정은 그래도 허용목록 행으로만 들어온다.
 openAccess 는 호출마다 읽으므로 이 값만 바꿀 때는 재시작이 필요 없다.
-★ 위 upsert 의 `update: data` 는 `metadata` 를 통째로 덮어쓴다 — 기존 client(특히 `qufox-den`)를
-고칠 때는 현재 metadata 를 읽어 합친 뒤 쓰거나 `openAccess` 를 data 에 함께 넣는다. 반대로 Den 행을
-복사해 새 client 를 만들 때는 `openAccess` 를 빼야 한다.
+★ 위 upsert 의 `update: data` 는 `metadata` 를 통째로 덮어쓴다 — 기존 client 를 고칠 때는 현재
+metadata 를 읽어 합친 뒤 쓴다(`openAccess` 같은 키가 사라진다).
+
+**client 은퇴.** 행을 지우지 않고 `enabled=false` 로 끈다(부팅 캐시라 qufox-api 재시작 필요). 되돌릴 수
+있게 빼는 값(`openAccess`, 그 client 의 `OAuthClientAccess` 행)을 `metadata.retired` 에 담은 뒤 허용목록
+행을 지운다. 예: `qufox-den`(마이그레이션 `20260640000000_sso_den_client_retire`, 되돌림은 그 `down.sql`).
 
 ## 3. RP 코드 드롭인 (스택별 복사)
 검증된 무-ESM RP 패턴(jose/openid-client 불요):
