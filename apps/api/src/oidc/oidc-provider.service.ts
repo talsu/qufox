@@ -113,7 +113,7 @@ export class OidcProviderService implements OnModuleInit {
    * task-078 P2-acl: 이 user 가 이 client(RP)에 접근 승인됐는가. SSO 관리자
    * (SSO_ADMIN_EMAILS)는 항상 허용(잠김 방지 + 승인 권한). OAuthClient.metadata.openAccess
    * 가 true 인 enabled client 는 허용목록 없이 이메일 인증된 활성 qufox 계정 모두를 허용한다
-   * (qufox-den, 10-21 — 가입이 열려 있어 미인증 계정은 허용목록으로만).
+   * (가입이 열려 있어 미인증 계정은 허용목록으로만. 처음 쓴 qufox-den 은 10-22 은퇴).
    * 그 외는 OAuthClientAccess 행 필요. 인터랙션(로그인/동의)에서 호출돼 미승인 시 코드/세션
    * 발급을 막는다. openAccess 는 부팅 캐시(loadClients)가 아니라 호출마다 읽는다 — 표를
    * 바꿔도 재기동 불요.
